@@ -1223,3 +1223,19 @@ function init(){
   document.getElementById('dateBadge').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
   if(!FIREBASE_READY){
     document.getElementById('syncDot').classN
+ame='sync-dot';
+    document.getElementById('syncLabel').textContent='Local only · not yet deployed';
+  }
+  renderHours();
+  renderExpenses();
+  renderPipeline();
+  renderSubs();
+  renderSheets();
+  renderReminders();
+}
+
+init();
+listenFirebase();
+</script>
+</body>
+</html>
