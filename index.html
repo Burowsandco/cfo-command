@@ -87,14 +87,7 @@ function signInWithGoogle() {
     });
 }
 
-firebase.auth().getRedirectResult().then(r => {
-  if(r && r.user){
-    S.currentUser = r.user.displayName || r.user.email;
-    document.getElementById('authAvatar').textContent = S.currentUser.charAt(0).toUpperCase();
-    document.getElementById('authName').textContent = S.currentUser;
-    document.getElementById('authBtn').textContent = 'Sign out';
-  }
-}).catch(e => {});
+
 
 
 function signOut() {
