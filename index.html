@@ -2,8 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Burrows & Co. — CFO Command</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -74,8 +72,6 @@ function listenFirebase() {
 // Google Sign-in
 function signInWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  // Any Google account can sign in
-  // Try popup first, fall back to redirect if blocked
   firebase.auth().signInWithPopup(provider)
     .then(result => {
       const user = result.user;
@@ -85,26 +81,21 @@ function signInWithGoogle() {
       document.getElementById('authBtn').textContent = 'Sign out';
     })
     .catch(err => {
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
-        // Fall back to redirect method
+      if(err.code==='auth/popup-blocked'||err.code==='auth/popup-closed-by-user'){
         firebase.auth().signInWithRedirect(provider);
-      } else {
-        console.log('Auth error:', err.code, err.message);
-        alert('Sign-in error: ' + err.message);
-      }
+      } else { console.log('Auth error:', err.code); }
     });
 }
 
-// Handle redirect result on page load
-firebase.auth().getRedirectResult().then(result => {
-  if (result && result.user) {
-    const user = result.user;
-    S.currentUser = user.displayName || user.email;
+firebase.auth().getRedirectResult().then(r => {
+  if(r && r.user){
+    S.currentUser = r.user.displayName || r.user.email;
     document.getElementById('authAvatar').textContent = S.currentUser.charAt(0).toUpperCase();
     document.getElementById('authName').textContent = S.currentUser;
     document.getElementById('authBtn').textContent = 'Sign out';
   }
-}).catch(err => console.log('Redirect result error:', err));
+}).catch(e => {});
+
 
 function signOut() {
   firebase.auth().signOut().then(() => {
