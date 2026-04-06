@@ -229,4 +229,10 @@ window._cmd = async function(){
     return;
   }
   return window._origCmd.apply(this, arguments);
+
+// Update placeholder and label text
+var inp2 = document.getElementById('cmdInp');
+if(inp2) inp2.placeholder = 'Ask for insights · Log hours · Add client · Set reminders · Request new features · "What is my Q2 gap?"';
+var lbls = document.querySelectorAll('.cmd-label');
+lbls.forEach(function(l){ l.textContent = '⌘ Command — insights · log data · add clients · set reminders · request new builds'; });
 };
