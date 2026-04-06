@@ -1261,6 +1261,237 @@ firebase.auth().onAuthStateChanged(function(user) {
     if(bell) bell.style.visibility = 'hidden';
   }
 });
+
+<!-- ── Command Bar ─────────────────────────────────────────── -->
+<style>
+.cmd-bar-wrap{position:fixed;top:0;left:214px;right:0;z-index:200;background:rgba(14,15,13,0.96);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.07);padding:10px 28px;display:flex;align-items:center;gap:12px;}
+.cmd-input-wrap{flex:1;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 14px;transition:border-color .2s;}
+.cmd-input-wrap:focus-within{border-color:var(--accent);}
+.cmd-icon{font-size:14px;flex-shrink:0;}
+.cmd-input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:var(--mono);font-size:12px;}
+.cmd-input::placeholder{color:var(--muted);}
+.cmd-send{padding:7px 16px;background:var(--accent);border:none;border-radius:6px;color:#0e0f0d;font-family:var(--mono);font-size:11px;font-weight:500;cursor:pointer;flex-shrink:0;transition:opacity .15s;}
+.cmd-send:hover{opacity:.85;}
+.cmd-send:disabled{opacity:.4;cursor:default;}
+.cmd-response{position:fixed;top:53px;left:214px;right:0;z-index:199;background:rgba(14,15,13,0.98);border-bottom:1px solid rgba(255,255,255,0.07);padding:14px 28px;font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.7;display:none;max-height:220px;overflow-y:auto;}
+.cmd-response.open{display:block;}
+.cmd-response .cmd-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;margin-right:8px;font-weight:500;}
+.cmd-tag.data{background:rgba(90,240,180,0.15);color:var(--green);}
+.cmd-tag.answer{background:rgba(200,240,90,0.15);color:var(--accent);}
+.cmd-tag.code{background:rgba(180,90,240,0.15);color:var(--purple);}
+.cmd-tag.nav{background:rgba(90,180,240,0.15);color:var(--info);}
+.cmd-close{float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;margin-top:-2px;}
+.cmd-action-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.cmd-action-btn{padding:5px 12px;border-radius:4px;font-family:var(--mono);font-size:10px;cursor:pointer;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:var(--text);transition:all .15s;}
+.cmd-action-btn:hover{background:rgba(255,255,255,0.08);}
+.cmd-action-btn.primary{background:rgba(200,240,90,0.12);border-color:rgba(200,240,90,0.3);color:var(--accent);}
+.main{padding-top:52px;}
+</style>
+
+<div class="cmd-bar-wrap" id="cmdBar">
+  <div class="cmd-input-wrap">
+    <span class="cmd-icon">⌘</span>
+    <input class="cmd-input" id="cmdInput" placeholder="Ask anything · Add data · Request changes · e.g. &quot;Log 3 hours on ChildPilot for Phil&quot; or &quot;What is my Q2 gap?&quot;" />
+  </div>
+  <button class="cmd-send" id="cmdSend" onclick="runCommand()">Ask</button>
+</div>
+<div class="cmd-response" id="cmdResponse">
+  <button class="cmd-close" onclick="closeCmd()">×</button>
+  <div id="cmdResponseBody"></div>
+</div>
+
+<script>
+// ── Command Bar Engine ────────────────────────────────────────
+const CLAUDE_URL = 'https://claude.ai/new?q=';
+
+document.getElementById('cmdInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter') runCommand();
+  if(e.key === 'Escape') closeCmd();
+});
+
+function closeCmd(){
+  document.getElementById('cmdResponse').classList.remove('open');
+  document.getElementById('cmdInput').value = '';
+}
+
+function showCmdResponse(tag, tagClass, message, actions=[]) {
+  const body = document.getElementById('cmdResponseBody');
+  const btnsHtml = actions.length ? `<div class="cmd-action-btns">${actions.map(a =>
+    `<button class="cmd-action-btn ${a.primary?'primary':''}" onclick="${a.fn}">${a.label}</button>`
+  ).join('')}</div>` : '';
+  body.innerHTML = `<span class="cmd-tag ${tagClass}">${tag}</span>${message}${btnsHtml}`;
+  document.getElementById('cmdResponse').classList.add('open');
+}
+
+async function runCommand() {
+  const input = document.getElementById('cmdInput').value.trim();
+  if(!input) return;
+  
+  const btn = document.getElementById('cmdSend');
+  btn.disabled = true;
+  btn.textContent = '...';
+  
+  try {
+    // First try to handle locally (data operations & navigation)
+    const local = tryLocalCommand(input);
+    if(local) {
+      btn.disabled = false;
+      btn.textContent = 'Ask';
+      return;
+    }
+    
+    // Otherwise send to Claude API
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system: `You are the CFO Command assistant for Burrows & Co. Digital Advisory.
+
+Current state:
+- Active clients: ChildPilot (Phase 2 retainer $2,800/mo active, Phase 1 sprint $4,000 complete = $6,800/mo total)
+- Monthly burn: $392.30/mo subscriptions
+- Net this month: $6,408
+- Q2 target: $36,500/mo (gap: $29,700)
+- Pipeline: Zoetis stalled at $22,500/mo Core Leadership
+- Unreimbursed: $1,432.81 Zoetis expenses (Mindy personal card)
+- Partners: Phil Burrows & Mindy Stotz, 50/50 split
+- Dashboard URL: https://burowsandco.github.io/cfo-command
+- GitHub repo: https://github.com/Burowsandco/cfo-command
+
+Classify the user request as one of:
+- DATA: Can be done directly in the dashboard (adding clients, logging hours, logging expenses, adding pipeline, adding reminders, updating numbers)
+- ANSWER: A question you can answer from the data above
+- CODE: Requires a code change to the dashboard (new views, new fields, layout changes, new features)
+- SHEETS: Related to Google Sheets sync
+
+For DATA requests: Give a short confirmation of what will be done and provide the action.
+For ANSWER requests: Answer directly and concisely.
+For CODE requests: Explain what the change involves and provide a link to open Claude for the build.
+For SHEETS requests: Guide them on how to connect the sheet.
+
+Always respond in this JSON format:
+{"type":"DATA|ANSWER|CODE|SHEETS","message":"your response","action":null,"claudePrompt":null}
+
+For CODE type, set claudePrompt to the pre-written prompt they should send to Claude.
+Keep responses under 100 words.`,
+        messages:[{role:'user',content:input}]
+      })
+    });
+    
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || '';
+    
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch(e) { parsed = {type:'ANSWER', message: text, action:null}; }
+    
+    const typeMap = {DATA:'data', ANSWER:'answer', CODE:'code', SHEETS:'nav'};
+    const tagClass = typeMap[parsed.type] || 'answer';
+    
+    const actions = [];
+    
+    if(parsed.type === 'DATA' && parsed.action) {
+      actions.push({label:'✓ Execute', fn:`executeDataAction('${parsed.action}')`, primary:true});
+    }
+    
+    if(parsed.type === 'CODE' && parsed.claudePrompt) {
+      const encodedPrompt = encodeURIComponent('CFO Command dashboard update — ' + (parsed.claudePrompt || input));
+      actions.push({label:'→ Open Claude to build this', fn:`window.open('https://claude.ai/new?q=${encodedPrompt}','_blank')`, primary:true});
+    }
+    
+    if(parsed.type === 'SHEETS') {
+      actions.push({label:'→ Go to Sheets Sync', fn:`nav('sheets',null)`, primary:true});
+    }
+    
+    actions.push({label:'✕ Dismiss', fn:'closeCmd()'});
+    
+    showCmdResponse(parsed.type, tagClass, parsed.message, actions);
+    
+  } catch(err) {
+    // Fallback if API fails — route to Claude
+    const encodedQ = encodeURIComponent(input + ' (re: Burrows & Co. CFO Command dashboard)');
+    showCmdResponse('ROUTE', 'code', 
+      'Sending to Claude for help with: ' + input,
+      [{label:'→ Open Claude', fn:`window.open('https://claude.ai/new?q=${encodedQ}','_blank')`, primary:true},
+       {label:'✕ Dismiss', fn:'closeCmd()'}]
+    );
+  }
+  
+  btn.disabled = false;
+  btn.textContent = 'Ask';
+}
+
+function tryLocalCommand(input) {
+  const lower = input.toLowerCase();
+  
+  // Navigation commands
+  const navMap = {
+    'dashboard': 'dashboard', 'revenue': 'revenue', 'waterfall': 'revenue',
+    'client': 'client', 'childpilot': 'client', 'hours': 'hours',
+    'capacity': 'hours', 'pipeline': 'pipeline', 'cash': 'cashflow',
+    'cashflow': 'cashflow', 'expenses': 'expenses', 'subscriptions': 'subscriptions',
+    'partners': 'partners', 'split': 'partners', 'sheets': 'sheets', 'deploy': 'deploy'
+  };
+  for(const [kw, view] of Object.entries(navMap)) {
+    if(lower.includes('go to ' + kw) || lower.includes('show ' + kw) || lower === kw) {
+      nav(view, null);
+      showCmdResponse('NAV', 'nav', 'Navigated to ' + view + ' view.', [{label:'✕ Dismiss', fn:'closeCmd()'}]);
+      return true;
+    }
+  }
+  
+  // Quick data answers from state
+  if(lower.includes('q2 gap') || lower.includes('revenue gap')) {
+    showCmdResponse('ANSWER', 'answer', 'Q2 gap is $29,700/mo. Current: $6,800 · Q2 target: $36,500. Zoetis activation ($22,500) covers most of it.', [{label:'→ Pipeline', fn:"nav('pipeline',null);closeCmd()"},{label:'✕ Dismiss', fn:'closeCmd()'}]);
+    return true;
+  }
+  if(lower.includes('burn') || lower.includes('subscription')) {
+    showCmdResponse('ANSWER', 'answer', 'Monthly burn is $392.30 in subscriptions. YTD: $4,588. See Subscriptions tab for full breakdown.', [{label:'→ Subscriptions', fn:"nav('subscriptions',null);closeCmd()"},{label:'✕ Dismiss', fn:'closeCmd()'}]);
+    return true;
+  }
+  if(lower.includes('net') || lower.includes('profit')) {
+    showCmdResponse('ANSWER', 'answer', 'Net this month: $6,408 ($6,800 revenue − $392 burn). That\'s $3,204 each at 50/50.', [{label:'→ Cash Flow', fn:"nav('cashflow',null);closeCmd()"},{label:'✕ Dismiss', fn:'closeCmd()'}]);
+    return true;
+  }
+  if(lower.includes('zoetis') && lower.includes('expense')) {
+    showCmdResponse('ANSWER', 'answer', '$1,432.81 Zoetis NJ workshop expenses not yet submitted. On Mindy\'s personal card. Submit to Zoetis immediately.', [{label:'→ Expenses', fn:"nav('expenses',null);closeCmd()"},{label:'✕ Dismiss', fn:'closeCmd()'}]);
+    return true;
+  }
+  
+  // Log hours shortcut
+  const hoursMatch = input.match(/log (d+)s*h(?:ours?)?s+(?:ons+)?(.+?)s+fors+(w+)/i);
+  if(hoursMatch) {
+    const [,hrs,client,person] = hoursMatch;
+    document.getElementById('fh-hrs').value = hrs;
+    document.getElementById('fh-client').value = [...document.querySelectorAll('#fh-client option')].find(o => o.text.toLowerCase().includes(client.toLowerCase()))?.value || document.querySelector('#fh-client option').value;
+    document.getElementById('fh-person').value = [...document.querySelectorAll('#fh-person option')].find(o => o.text.toLowerCase().includes(person.toLowerCase()))?.value || 'Phil';
+    document.getElementById('addHoursModal').classList.add('open');
+    showCmdResponse('DATA', 'data', `Pre-filled hours form: ${hrs}h for ${person} on ${client}. Review and confirm.`, [{label:'✕ Dismiss', fn:'closeCmd()'}]);
+    return true;
+  }
+  
+  // Add reminder shortcut
+  if(lower.includes('remind') || lower.includes('reminder')) {
+    const text = input.replace(/add reminder[:s]*/i,'').replace(/remind me[:s]*/i,'').trim();
+    if(text) {
+      S.reminders.push({id:S.nextId++,title:text,body:'Added via command bar.',urgency:'info',done:false,meta:'Command bar · '+new Date().toLocaleDateString()});
+      renderReminders();
+      syncToFirebase();
+      showCmdResponse('DATA', 'data', `Reminder added: "${text}"`, [{label:'→ View reminders', fn:'toggleReminders();closeCmd()'},{label:'✕ Dismiss', fn:'closeCmd()'}]);
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+function executeDataAction(action) {
+  try { eval(action); } catch(e) { console.log('Action error:', e); }
+  closeCmd();
+}
+</script>
 </script>
 </body>
 </html>
