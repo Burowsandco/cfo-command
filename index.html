@@ -1492,6 +1492,46 @@ function executeDataAction(action) {
   closeCmd();
 }
 </script>
+<script>
+// ── Safe initialization wrapper ─────────────────────────────
+// Ensures S and all functions are defined before auth listener fires
+window.addEventListener('load', function() {
+  // Re-register auth state listener safely after all scripts loaded
+  if(typeof firebase !== 'undefined' && typeof S !== 'undefined') {
+    firebase.auth().onAuthStateChanged(function(user) {
+      // Auth gate
+      const gate = document.getElementById('auth-gate');
+      const shell = document.querySelector('.shell');
+      const bell = document.querySelector('.reminder-trigger');
+      const cmdBar = document.getElementById('cmdBar');
+      if(user) {
+        S.currentUser = user.displayName || user.email;
+        const av = document.getElementById('authAvatar');
+        const nm = document.getElementById('authName');
+        const bt = document.getElementById('authBtn');
+        if(av) av.textContent = S.currentUser.charAt(0).toUpperCase();
+        if(nm) nm.textContent = S.currentUser;
+        if(bt) bt.textContent = 'Sign out';
+        if(gate) gate.style.display = 'none';
+        if(shell) shell.style.visibility = 'visible';
+        if(bell) bell.style.visibility = 'visible';
+        if(cmdBar) cmdBar.style.display = 'flex';
+        // Start Firebase sync
+        if(typeof listenFirebase === 'function') listenFirebase();
+      } else {
+        if(gate) { gate.style.display = 'flex'; }
+        if(shell) shell.style.visibility = 'hidden';
+        if(bell) bell.style.visibility = 'hidden';
+        if(cmdBar) cmdBar.style.display = 'none';
+      }
+    });
+  }
+  
+  // Show command bar (hidden by default until signed in)
+  const cb = document.getElementById('cmdBar');
+  if(cb) cb.style.display = 'none'; // auth gate controls visibility
+});
+</script>
 </script>
 </body>
 </html>
