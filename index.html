@@ -74,7 +74,8 @@ function listenFirebase() {
 // Google Sign-in
 function signInWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  provider.setCustomParameters({hd: 'burrowsadvisory.com'});
+  // Any Google account can sign in
+  // Try popup first, fall back to redirect if blocked
   firebase.auth().signInWithPopup(provider)
     .then(result => {
       const user = result.user;
@@ -83,8 +84,27 @@ function signInWithGoogle() {
       document.getElementById('authName').textContent = S.currentUser;
       document.getElementById('authBtn').textContent = 'Sign out';
     })
-    .catch(err => console.log('Auth error:', err));
+    .catch(err => {
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+        // Fall back to redirect method
+        firebase.auth().signInWithRedirect(provider);
+      } else {
+        console.log('Auth error:', err.code, err.message);
+        alert('Sign-in error: ' + err.message);
+      }
+    });
 }
+
+// Handle redirect result on page load
+firebase.auth().getRedirectResult().then(result => {
+  if (result && result.user) {
+    const user = result.user;
+    S.currentUser = user.displayName || user.email;
+    document.getElementById('authAvatar').textContent = S.currentUser.charAt(0).toUpperCase();
+    document.getElementById('authName').textContent = S.currentUser;
+    document.getElementById('authBtn').textContent = 'Sign out';
+  }
+}).catch(err => console.log('Redirect result error:', err));
 
 function signOut() {
   firebase.auth().signOut().then(() => {
