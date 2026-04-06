@@ -5,9 +5,9 @@ function addStyles(){
   var s=document.createElement('style');
   s.id='cmd-styles';
   s.textContent=[
-    '.cmd-wrap{padding:14px 40px 14px;background:'+BG+';border-bottom:2px solid '+ACCENT+';margin-bottom:22px;}',
+        '.cmd-wrap{padding:14px 28px 14px;background:'+BG+';border-bottom:2px solid '+ACCENT+';margin-bottom:22px;box-sizing:border-box;}',
     '.cmd-label{font-family:"DM Mono",monospace;font-size:9px;color:'+ACCENT+';letter-spacing:.14em;text-transform:uppercase;margin-bottom:7px;}',
-    '.cmd-row{display:flex;align-items:center;gap:10px;background:rgba(200,240,90,0.05);border:1.5px solid '+ACCENT+';border-radius:8px;padding:9px 14px;}',
+        '.cmd-row{display:flex;align-items:center;gap:10px;width:100%;background:rgba(200,240,90,0.05);border:1.5px solid '+ACCENT+';border-radius:8px;padding:9px 14px;box-sizing:border-box;}',
     '.cmd-row:focus-within{box-shadow:0 0 0 3px rgba(200,240,90,0.12);}',
     '.cmd-icon{font-size:14px;color:'+ACCENT+';flex-shrink:0;}',
     '.cmd-inp{flex:1;background:none;border:none;outline:none;color:'+TEXT+';font-family:"DM Mono",monospace;font-size:12px;}',
