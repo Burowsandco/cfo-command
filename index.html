@@ -6,16 +6,101 @@
 <title>Burrows & Co. — CFO Command</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 
-<!-- Firebase (loaded after setup is complete — see Deploy tab for config) -->
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
-// FIREBASE CONFIG — fill these in after setup (see Deploy & Maintain tab)
 const FIREBASE_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  databaseURL: ""
+  apiKey: "AIzaSyAgSLxhOP1-2XFA-7GUEpDz9duDBkxB8iQ",
+  authDomain: "burrows-cfo.firebaseapp.com",
+  databaseURL: "https://burrows-cfo-default-rtdb.firebaseio.com",
+  projectId: "burrows-cfo",
+  storageBucket: "burrows-cfo.firebasestorage.app",
+  messagingSenderId: "466879182304",
+  appId: "1:466879182304:web:a4a703af3a72cd55106785"
 };
-const FIREBASE_READY = FIREBASE_CONFIG.apiKey !== "";
+const FIREBASE_READY = true;
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.database();
+
+// ── Sync helpers ──────────────────────────────────────────────
+// Save entire state to Firebase
+function syncToFirebase() {
+  try {
+    db.ref('burrows-cfo/state').set({
+      expenses: S.expenses,
+      pipeline: S.pipeline,
+      subs: S.subs,
+      sheets: S.sheets,
+      reminders: S.reminders,
+      team: S.team,
+      hoursLog: S.hoursLog,
+      lastUpdated: new Date().toISOString(),
+      lastUpdatedBy: S.currentUser || 'unknown'
+    });
+  } catch(e) { console.log('Firebase sync error:', e); }
+}
+
+// Listen for real-time updates from Firebase
+function listenFirebase() {
+  db.ref('burrows-cfo/state').on('value', snap => {
+    const data = snap.val();
+    if (!data) return;
+    // Merge remote data into local state
+    if (data.expenses) S.expenses = data.expenses;
+    if (data.pipeline) S.pipeline = data.pipeline;
+    if (data.subs) S.subs = data.subs;
+    if (data.sheets) S.sheets = data.sheets;
+    if (data.reminders) S.reminders = data.reminders;
+    if (data.team) S.team = data.team;
+    if (data.hoursLog) S.hoursLog = data.hoursLog;
+    // Re-render everything
+    renderHours(); renderExpenses(); renderPipeline(); renderSubs(); renderSheets(); renderReminders();
+    // Update sync indicator
+    const dot = document.getElementById('syncDot');
+    const label = document.getElementById('syncLabel');
+    if (dot) dot.className = 'sync-dot live';
+    if (label) {
+      const who = data.lastUpdatedBy && data.lastUpdatedBy !== 'unknown' ? ' · ' + data.lastUpdatedBy : '';
+      const when = data.lastUpdated ? ' · ' + new Date(data.lastUpdated).toLocaleTimeString() : '';
+      label.textContent = 'Live sync active' + who + when;
+    }
+  });
+}
+
+// Google Sign-in
+function signInWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({hd: 'burrowsadvisory.com'});
+  firebase.auth().signInWithPopup(provider)
+    .then(result => {
+      const user = result.user;
+      S.currentUser = user.displayName || user.email;
+      document.getElementById('authAvatar').textContent = S.currentUser.charAt(0).toUpperCase();
+      document.getElementById('authName').textContent = S.currentUser;
+      document.getElementById('authBtn').textContent = 'Sign out';
+    })
+    .catch(err => console.log('Auth error:', err));
+}
+
+function signOut() {
+  firebase.auth().signOut().then(() => {
+    S.currentUser = null;
+    document.getElementById('authAvatar').textContent = '?';
+    document.getElementById('authName').textContent = 'Not signed in';
+    document.getElementById('authBtn').textContent = 'Sign in';
+  });
+}
+
+firebase.auth().onAuthStateChanged(user => {
+  if (user) {
+    S.currentUser = user.displayName || user.email;
+    document.getElementById('authAvatar').textContent = S.currentUser.charAt(0).toUpperCase();
+    document.getElementById('authName').textContent = S.currentUser;
+    document.getElementById('authBtn').textContent = 'Sign out';
+  }
+});
 </script>
 
 <style>
@@ -482,7 +567,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="cash-row"><span class="cash-label">Period</span><span class="cash-amt m">Feb 16 – Mar 17</span></div>
       <div class="cash-row"><span class="cash-label">Hours</span><span class="cash-amt">10h</span></div>
       <div class="cash-row"><span class="cash-label">Revenue</span><span class="cash-amt" style="color:var(--accent);" contenteditable="true">$4,000</span></div>
-      <div class="cash-row"><span class="cash-label">Contact</span><span class="cash-amt m" style="font-size:11px;" contenteditable="true">neida@childpilot.com · 469-767-2548</span></div>
+      <div class="cash-row"><span class="cash-label">Contact</span><span class="cash-amt m" style="font-size:11px;" contenteditable="true"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d1bfb4b8b5b091b2b9b8bdb5a1b8bdbea5ffb2bebc">[email&#160;protected]</a> · 469-767-2548</span></div>
     </div>
     <div class="panel"><div class="panel-title">Phase 2 · Monthly Retainer <span><span class="pill pg"><span class="pill-dot"></span>Live</span></span></div>
       <div class="cash-row"><span class="cash-label">ID</span><span class="cash-amt m">CL002</span></div>
@@ -682,32 +767,32 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
   <div class="section-header" style="margin-top:4px;"><span class="section-title">Step 1 · Host it on GitHub Pages (free)</span></div>
   <div class="panel" style="margin-bottom:20px;">
     <div class="deploy-step">
-      <div class="step-num active">1</div>
+      <div class="step-num done">✓</div>
       <div><div class="step-title">Create a free GitHub account</div>
-        <div class="step-desc">Go to <a href="https://github.com" target="_blank">github.com</a> → Sign up. Use your <code>philburrows@burrowsadvisory.com</code> Google Workspace email — you can sign in with Google.</div>
+        <div class="step-desc">Go to <a href="https://github.com" target="_blank">github.com</a> → Sign up. Use your <code><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3f4f5756535d4a4d4d50484c7f5d4a4d4d50484c5e5b49564c504d46115c5052">[email&#160;protected]</a></code> Google Workspace email — you can sign in with Google.</div>
       </div>
     </div>
     <div class="deploy-step">
-      <div class="step-num active">2</div>
+      <div class="step-num done">✓</div>
       <div><div class="step-title">Create a new repository called <code>cfo-command</code></div>
         <div class="step-desc">Click the + icon → New repository. Name it <code>cfo-command</code>. Set it to <strong>Public</strong> (required for free GitHub Pages). Click Create repository.</div>
       </div>
     </div>
     <div class="deploy-step">
-      <div class="step-num active">3</div>
+      <div class="step-num done">✓</div>
       <div><div class="step-title">Upload this HTML file</div>
         <div class="step-desc">In your new repo, click "Add file" → "Upload files". Drag in this <code>cfo-bot-v5.html</code> file. <strong>Rename it to <code>index.html</code> before uploading</strong> — that's what GitHub Pages serves as the homepage. Commit the file.</div>
       </div>
     </div>
     <div class="deploy-step">
-      <div class="step-num active">4</div>
+      <div class="step-num done">✓</div>
       <div><div class="step-title">Enable GitHub Pages</div>
         <div class="step-desc">In your repo, go to Settings → Pages. Under "Branch", select <code>main</code> and <code>/ (root)</code>. Click Save. In ~60 seconds your URL is live at:<br>
         <code>https://[your-github-username].github.io/cfo-command</code></div>
       </div>
     </div>
     <div class="deploy-step">
-      <div class="step-num active">5</div>
+      <div class="step-num done">✓</div>
       <div><div class="step-title">Share the URL with Mindy</div>
         <div class="step-desc">That URL works for anyone — no login required to view. Bookmark it in Chrome. Add it to your Google Workspace shared bookmark or a Notion page.</div>
       </div>
@@ -719,7 +804,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
   <div class="panel" style="margin-bottom:20px;">
     <div class="banner banner-info" style="margin-bottom:16px;"><div class="banner-icon">i</div><div class="banner-text"><strong>Without Firebase:</strong> you and Mindy see the same page but edits don't sync — if Phil adds a client, Mindy won't see it until the file is re-uploaded. Firebase fixes this in real time. Free tier handles your scale forever.</div></div>
     <div class="deploy-step">
-      <div class="step-num active">1</div>
+      <div class="step-num done">✓</div>
       <div><div class="step-title">Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a></div>
         <div class="step-desc">Sign in with your Google Workspace account. Click "Create a project" → name it <code>burrows-cfo</code> → Continue → disable Google Analytics (not needed) → Create project.</div>
       </div>
@@ -799,9 +884,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
   <!-- SECTION 5: QUICK REFERENCE -->
   <div class="section-header"><span class="section-title">Quick reference · URLs & tools</span></div>
   <div class="panel">
-    <div class="cash-row"><span class="cash-label">GitHub Pages URL (after setup)</span><span class="cash-amt" style="color:var(--info);font-size:11px;" contenteditable="true">https://[username].github.io/cfo-command</span></div>
+    <div class="cash-row"><span class="cash-label">GitHub Pages URL (after setup)</span><span class="cash-amt" style="color:var(--info);font-size:11px;" contenteditable="true">https://burowsandco.github.io/cfo-command</span></div>
     <div class="cash-row"><span class="cash-label">Firebase console</span><span class="cash-amt" style="color:var(--info);font-size:11px;">console.firebase.google.com</span></div>
-    <div class="cash-row"><span class="cash-label">GitHub repo</span><span class="cash-amt" style="color:var(--info);font-size:11px;" contenteditable="true">github.com/[username]/cfo-command</span></div>
+    <div class="cash-row"><span class="cash-label">GitHub repo</span><span class="cash-amt" style="color:var(--info);font-size:11px;" contenteditable="true">github.com/Burowsandco/cfo-command</span></div>
     <div class="cash-row"><span class="cash-label">This Claude conversation</span><span class="cash-amt" style="color:var(--accent);font-size:11px;">Bookmark it — this is your dev environment</span></div>
     <div class="cash-row"><span class="cash-label">Next up: Lead Gen Bot</span><span class="cash-amt" style="color:var(--purple);font-size:11px;">Claude Code build · Apollo API + HubSpot MCP</span></div>
   </div>
@@ -920,7 +1005,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
   </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── State ──────────────────────────────────────────────────────
 const S = {
   team:[{name:'Phil Burrows',hrs:6,target:80},{name:'Mindy Stotz',hrs:4,target:80},{name:'Contractors',hrs:0,target:0}],
@@ -975,18 +1060,14 @@ function openGuide(){document.getElementById('guideOverlay').classList.add('open
 
 // ── Auth (placeholder — activates after Firebase setup) ────────
 function toggleAuth(){
-  if(!FIREBASE_READY){
-    alert('Sign-in requires Firebase setup.\n\nGo to the Deploy & Maintain tab and follow Step 2 to set up Firebase. Once your config is in place, come back to Claude and say "activate Google login".');
-    return;
-  }
-  // Firebase auth will be wired in after config is added
+  if(S.currentUser){ signOut(); } else { signInWithGoogle(); }
 }
 
 // ── Save field (will sync to Firebase once configured) ─────────
 function saveField(key,el){
   const val=el.innerText.trim();
-  // localStorage as fallback until Firebase is live
   try{ localStorage.setItem('cfo_'+key, val); }catch(e){}
+  syncToFirebase();
 }
 
 // ── Reminders ──────────────────────────────────────────────────
@@ -1103,14 +1184,14 @@ function addSheet(){
 function addClient(){
   const name=document.getElementById('fc-name').value.trim();if(!name) return;
   S.reminders.push({id:S.nextId++,title:'Onboard: '+name,body:'Set up engagement docs, confirm rate, schedule kick off.',urgency:'info',done:false,meta:'Auto · New client'});
-  renderReminders();
+  renderReminders();syncToFirebase();
   document.getElementById('addClientModal').classList.remove('open');
   nav('client',null);
 }
 function addExpense(){
   const amt=+document.getElementById('fe-amt').value;if(!amt) return;
   S.expenses.unshift({date:document.getElementById('fe-date').value,desc:document.getElementById('fe-desc').value,client:document.getElementById('fe-client').value,cat:document.getElementById('fe-cat').value,amt,status:document.getElementById('fe-status').value});
-  renderExpenses();document.getElementById('addExpenseModal').classList.remove('open');
+  syncToFirebase();renderExpenses();document.getElementById('addExpenseModal').classList.remove('open');
 }
 function addHours(){
   const hrs=+document.getElementById('fh-hrs').value;if(!hrs) return;
@@ -1118,30 +1199,21 @@ function addHours(){
   S.hoursLog.unshift({person,hrs,client:document.getElementById('fh-client').value,desc:document.getElementById('fh-desc').value});
   const t=S.team.find(t=>t.name.toLowerCase().includes(person.toLowerCase()));
   if(t) t.hrs+=hrs;
-  renderHours();document.getElementById('addHoursModal').classList.remove('open');
+  syncToFirebase();renderHours();document.getElementById('addHoursModal').classList.remove('open');
 }
 function addPipeline(){
   const name=document.getElementById('fp-name').value.trim();if(!name) return;
   S.pipeline.push({name,type:document.getElementById('fp-type').value,rev:+document.getElementById('fp-rev').value||0,stage:document.getElementById('fp-stage').value,lastContact:document.getElementById('fp-date').value,notes:document.getElementById('fp-notes').value});
-  renderPipeline();document.getElementById('addPipelineModal').classList.remove('open');
+  syncToFirebase();renderPipeline();document.getElementById('addPipelineModal').classList.remove('open');
 }
 function addSub(){
   const name=document.getElementById('fs-name').value.trim();if(!name) return;
   S.subs.push({name,billing:document.getElementById('fs-billing').value,cost:+document.getElementById('fs-cost').value||0,cat:document.getElementById('fs-cat').value});
-  renderSubs();document.getElementById('addSubModal').classList.remove('open');
+  syncToFirebase();renderSubs();document.getElementById('addSubModal').classList.remove('open');
 }
 
 // ── Init ───────────────────────────────────────────────────────
 function init(){
   document.getElementById('dateBadge').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
   if(!FIREBASE_READY){
-    document.getElementById('syncDot').className='sync-dot pending';
-    document.getElementById('syncLabel').textContent='Local only · see Deploy tab';
-  }
-  renderHours();renderExpenses();renderPipeline();renderSubs();renderSheets();renderReminders();
-  setTimeout(()=>{if(!sessionStorage.getItem('rSeen')){toggleReminders();sessionStorage.setItem('rSeen','1');}},1800);
-}
-init();
-</script>
-</body>
-</html>
+    document.getElementById('syncDot').classN
