@@ -155,7 +155,7 @@ window._cmd=async function(){
     if(btn){btn.disabled=false;btn.textContent='Ask';}return;
   }
   if(lower.indexOf('zoetis')>-1&&(lower.indexOf('expense')>-1||lower.indexOf('reimburse')>-1)){
-    window._cmdShow('ANSWER','ans','<strong>$1,432.81</strong> Zoetis NJ expenses not submitted. Mindy's personal card. Submit immediately.',[{l:'Expenses',fn:"nav('expenses',null);_cmdX()",p:true},{l:'Dismiss',fn:'_cmdX()'}]);
+        window._cmdShow('ANSWER','ans','<strong>$1,432.81</strong> Zoetis NJ expenses not submitted. Mindy personal card. Submit immediately.',[{l:'Expenses',fn:"nav('expenses',null);_cmdX()",p:true},{l:'Dismiss',fn:'_cmdX()'}]);
     if(btn){btn.disabled=false;btn.textContent='Ask';}return;
   }
   if(lower.indexOf('health')>-1||lower.indexOf('score')>-1){
@@ -215,3 +215,18 @@ window.nav=function(id,el){if(origNav)origNav(id,el);setTimeout(inject,60);};
 if(!document.getElementById('cmd-styles'))addStyles();
 inject();
 })();
+
+// Patch: fix apostrophe syntax error in Zoetis expense check
+window._origCmd = window._cmd;
+window._cmd = async function(){
+  var inp = document.getElementById('cmdInp');
+  if(!inp) return;
+  var input = inp.value.trim();
+  if(!input) return;
+  var lower = input.toLowerCase();
+  if(lower.indexOf('zoetis') > -1 && (lower.indexOf('expense') > -1 || lower.indexOf('reimburse') > -1)){
+    window._cmdShow('ANSWER','ans','<strong>$1,432.81</strong> Zoetis NJ expenses not submitted. Mindy personal card. Submit immediately.',[{l:'Expenses',fn:"nav('expenses',null);_cmdX()",p:true},{l:'Dismiss',fn:'_cmdX()'}]);
+    return;
+  }
+  return window._origCmd.apply(this, arguments);
+};
