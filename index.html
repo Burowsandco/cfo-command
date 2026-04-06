@@ -1237,5 +1237,30 @@ ame='sync-dot';
 init();
 listenFirebase();
 </script>
+<div id="auth-gate" style="display:none;position:fixed;inset:0;background:#0e0f0d;z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:20px;">
+  <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:300;color:#c8f05a;">Burrows & Co.</div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:#7a7870;letter-spacing:.12em;text-transform:uppercase;">CFO Command · Private</div>
+  <button onclick="signInWithGoogle()" style="margin-top:16px;padding:12px 28px;background:#c8f05a;border:none;border-radius:6px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:#0e0f0d;cursor:pointer;">Sign in with Google</button>
+  <div id="gate-msg" style="font-family:'DM Mono',monospace;font-size:10px;color:#7a7870;"></div>
+</div>
+<script>
+// Auth gate — show/hide dashboard based on sign-in state
+firebase.auth().onAuthStateChanged(function(user) {
+  const gate = document.getElementById('auth-gate');
+  const shell = document.querySelector('.shell');
+  const bell = document.querySelector('.reminder-trigger');
+  if (user) {
+    // Signed in — hide gate, show dashboard
+    if(gate) gate.style.display = 'none';
+    if(shell) shell.style.visibility = 'visible';
+    if(bell) bell.style.visibility = 'visible';
+  } else {
+    // Not signed in — show gate, hide dashboard
+    if(gate) gate.style.display = 'flex';
+    if(shell) shell.style.visibility = 'hidden';
+    if(bell) bell.style.visibility = 'hidden';
+  }
+});
+</script>
 </body>
 </html>
