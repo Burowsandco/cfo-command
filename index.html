@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Burrows & Co. — CFO Command</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- Firebase (loaded after setup is complete — see Deploy tab for config) -->
+<script>
+// FIREBASE CONFIG — fill these in after setup (see Deploy & Maintain tab)
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  databaseURL: ""
+};
+const FIREBASE_READY = FIREBASE_CONFIG.apiKey !== "";
+</script>
+
+<style>
+:root{--bg:#0e0f0d;--bg2:#151614;--bg3:#1c1d1a;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#e8e6df;--muted:#7a7870;--accent:#c8f05a;--green:#5af0b4;--warn:#f0b45a;--danger:#f05a5a;--info:#5ab4f0;--purple:#b45af0;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--serif:'Fraunces',serif;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;font-size:14px;line-height:1.5;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.shell{display:flex;min-height:100vh;}
+
+/* Sidebar */
+.sidebar{width:214px;min-width:214px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.logo{padding:0 20px 20px;border-bottom:1px solid var(--border);}
+.logo-mark{font-family:var(--serif);font-weight:600;font-size:17px;color:var(--accent);}
+.logo-sub{font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:2px;font-family:var(--mono);}
+
+/* Sync status pill in sidebar */
+.sync-status{display:flex;align-items:center;gap:6px;margin-top:6px;font-family:var(--mono);font-size:9px;color:var(--muted);}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.sync-dot.live{background:var(--green);box-shadow:0 0 6px var(--green);}
+.sync-dot.pending{background:var(--warn);}
+
+.nav{padding:14px 0;flex:1;}
+.nav-section{font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;font-family:var(--mono);padding:0 20px;margin:14px 0 5px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 20px;cursor:pointer;color:var(--muted);font-size:12px;transition:all .15s;border-left:2px solid transparent;position:relative;}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03);}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(200,240,90,0.05);}
+.nav-badge{position:absolute;right:14px;background:var(--danger);color:#fff;font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:8px;}
+.nav-badge.warn{background:var(--warn);color:#0e0f0d;}
+.nav-icon{width:13px;height:13px;flex-shrink:0;}
+.sidebar-footer{padding:14px 20px;border-top:1px solid var(--border);}
+.period-selector{display:flex;background:var(--bg3);border-radius:5px;padding:3px;gap:2px;}
+.period-btn{flex:1;padding:4px 0;border:none;background:transparent;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;border-radius:3px;transition:all .15s;}
+.period-btn.active{background:var(--accent);color:#0e0f0d;font-weight:500;}
+.guide-btn{display:flex;align-items:center;gap:6px;width:100%;margin-top:10px;padding:7px 10px;background:rgba(200,240,90,0.08);border:1px solid rgba(200,240,90,0.2);border-radius:5px;color:var(--accent);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s;}
+.guide-btn:hover{background:rgba(200,240,90,0.14);}
+
+/* Auth bar */
+.auth-bar{display:flex;align-items:center;gap:8px;padding:10px 20px;border-top:1px solid var(--border);margin-top:auto;}
+.auth-avatar{width:26px;height:26px;border-radius:50%;background:rgba(200,240,90,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--accent);font-weight:500;flex-shrink:0;}
+.auth-name{font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.auth-btn{font-family:var(--mono);font-size:9px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;}
+.auth-btn:hover{color:var(--text);}
+
+/* Main */
+.main{flex:1;padding:32px 40px;overflow-y:auto;}
+.view{display:none;}.view.active{display:block;}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px;}
+.page-title{font-family:var(--serif);font-size:26px;font-weight:300;letter-spacing:-.5px;line-height:1.1;}
+.page-title em{font-style:italic;color:var(--accent);}
+.page-sub{font-size:11px;color:var(--muted);margin-top:4px;font-family:var(--mono);}
+.date-badge{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--bg3);padding:5px 11px;border-radius:4px;border:1px solid var(--border);white-space:nowrap;flex-shrink:0;}
+
+/* Banners */
+.banner{display:flex;align-items:flex-start;gap:11px;border-radius:8px;padding:12px 15px;margin-bottom:16px;}
+.banner-icon{width:18px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px;}
+.banner-text{font-size:12px;line-height:1.65;}
+.banner-text strong{font-weight:500;}
+.banner-danger{background:rgba(240,90,90,0.06);border:1px solid rgba(240,90,90,0.18);}
+.banner-danger .banner-icon{background:var(--danger);color:#fff;}
+.banner-danger .banner-text strong{color:var(--danger);}
+.banner-warn{background:rgba(240,180,90,0.06);border:1px solid rgba(240,180,90,0.18);}
+.banner-warn .banner-icon{background:var(--warn);color:#0e0f0d;}
+.banner-warn .banner-text strong{color:var(--warn);}
+.banner-info{background:rgba(90,180,240,0.05);border:1px solid rgba(90,180,240,0.15);}
+.banner-info .banner-icon{background:var(--info);color:#fff;}
+.banner-info .banner-text strong{color:var(--info);}
+.banner-accent{background:rgba(200,240,90,0.04);border:1px solid rgba(200,240,90,0.14);}
+.banner-accent .banner-icon{background:var(--accent);color:#0e0f0d;}
+.banner-accent .banner-text strong{color:var(--accent);}
+.banner-purple{background:rgba(180,90,240,0.05);border:1px solid rgba(180,90,240,0.18);}
+.banner-purple .banner-icon{background:var(--purple);color:#fff;}
+.banner-purple .banner-text strong{color:var(--purple);}
+
+/* Health */
+.health-bar{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:13px 16px;margin-bottom:20px;}
+.health-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.health-text{font-size:12px;color:var(--text);flex:1;line-height:1.6;}
+.health-score{font-family:var(--mono);font-size:20px;font-weight:500;}
+.health-label{font-size:9px;color:var(--muted);font-family:var(--mono);}
+
+/* Metrics */
+.metrics-grid{display:grid;gap:12px;margin-bottom:20px;}
+.g4{grid-template-columns:repeat(4,1fr);}
+.g3{grid-template-columns:repeat(3,1fr);}
+.g2{grid-template-columns:repeat(2,1fr);}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:16px;position:relative;overflow:hidden;transition:border-color .2s;}
+.metric-card:hover{border-color:var(--border2);}
+.metric-label{font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-family:var(--mono);margin-bottom:7px;}
+.metric-value{font-family:var(--serif);font-size:24px;font-weight:300;letter-spacing:-.5px;line-height:1;margin-bottom:5px;}
+.metric-sub{font-size:10px;color:var(--muted);font-family:var(--mono);}
+.metric-delta{display:inline-flex;align-items:center;gap:3px;font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:3px;margin-top:4px;}
+.du{background:rgba(90,240,180,0.1);color:var(--green);}
+.dd{background:rgba(240,90,90,0.1);color:var(--danger);}
+.dw{background:rgba(240,180,90,0.1);color:var(--warn);}
+.metric-bar{position:absolute;bottom:0;left:0;height:3px;border-radius:0 0 9px 9px;opacity:.45;}
+
+/* Layout */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:17px;}
+.panel-title{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:13px;display:flex;justify-content:space-between;align-items:center;}
+
+/* Section */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.section-title{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;}
+.section-action{font-family:var(--mono);font-size:10px;color:var(--accent);cursor:pointer;background:none;border:none;padding:0;}
+
+/* Table */
+.data-table{background:var(--bg2);border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-bottom:20px;}
+.th{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.table-row{padding:11px 16px;border-bottom:1px solid var(--border);display:grid;gap:10px;align-items:center;transition:background .15s;}
+.table-row:last-child{border-bottom:none;}
+.table-row.clickable{cursor:pointer;}
+.table-row.clickable:hover{background:rgba(255,255,255,0.02);}
+.td{font-family:var(--mono);font-size:12px;color:var(--text);}
+.td.m{color:var(--muted);}
+
+/* Pills */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-family:var(--mono);}
+.pg{background:rgba(90,240,180,0.1);color:var(--green);}
+.pw{background:rgba(240,180,90,0.1);color:var(--warn);}
+.pd{background:rgba(240,90,90,0.1);color:var(--danger);}
+.pi{background:rgba(90,180,240,0.1);color:var(--info);}
+.pm{background:rgba(255,255,255,0.06);color:var(--muted);}
+.pp{background:rgba(180,90,240,0.1);color:var(--purple);}
+.pill-dot{width:4px;height:4px;border-radius:50%;background:currentColor;}
+
+/* Mini bar */
+.mbw{background:rgba(255,255,255,0.06);border-radius:2px;height:4px;overflow:hidden;margin-top:4px;}
+.mb{height:100%;border-radius:2px;transition:width .5s;}
+
+/* Cash rows */
+.cash-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
+.cash-row:last-child{border-bottom:none;}
+.cash-label{font-size:12px;color:var(--muted);}
+.cash-amt{font-family:var(--mono);font-size:13px;font-weight:500;}
+.cash-total{border-top:1px solid var(--border2) !important;margin-top:4px;padding-top:11px !important;}
+
+/* Hours */
+.hr-row{display:flex;align-items:center;gap:11px;padding:7px 0;border-bottom:1px solid var(--border);}
+.hr-row:last-child{border-bottom:none;}
+.hr-name{font-size:12px;width:120px;flex-shrink:0;}
+.hr-bar-wrap{flex:1;background:rgba(255,255,255,0.06);border-radius:2px;height:4px;overflow:hidden;}
+.hr-bar{height:100%;border-radius:2px;background:var(--accent);transition:width .5s;}
+.hr-num{font-family:var(--mono);font-size:10px;color:var(--muted);width:80px;text-align:right;flex-shrink:0;}
+
+/* Waterfall */
+.wf-row{display:flex;align-items:center;gap:11px;padding:6px 0;border-bottom:1px solid var(--border);}
+.wf-row:last-child{border-bottom:none;}
+.wf-label{font-size:11px;color:var(--muted);width:120px;flex-shrink:0;font-family:var(--mono);}
+.wf-bar-wrap{flex:1;background:rgba(255,255,255,0.05);border-radius:2px;height:6px;}
+.wf-bar{height:6px;border-radius:2px;transition:width .8s;}
+.wf-val{font-family:var(--mono);font-size:11px;width:80px;text-align:right;flex-shrink:0;}
+
+/* Partners */
+.partner-row{display:flex;align-items:center;gap:13px;padding:11px 0;border-bottom:1px solid var(--border);}
+.partner-row:last-child{border-bottom:none;}
+.avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;}
+.av-p{background:rgba(200,240,90,0.15);color:var(--accent);}
+.av-m{background:rgba(90,180,240,0.15);color:var(--info);}
+
+/* Deploy steps */
+.deploy-step{display:flex;gap:14px;padding:16px 0;border-bottom:1px solid var(--border);}
+.deploy-step:last-child{border-bottom:none;}
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:500;flex-shrink:0;margin-top:2px;}
+.step-num.done{background:rgba(90,240,180,0.15);color:var(--green);}
+.step-num.active{background:rgba(200,240,90,0.15);color:var(--accent);}
+.step-num.pending{background:rgba(255,255,255,0.06);color:var(--muted);}
+.step-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;}
+.step-desc{font-size:12px;color:var(--muted);line-height:1.7;}
+.step-desc code{font-family:var(--mono);background:var(--bg3);padding:1px 6px;border-radius:3px;color:var(--accent);font-size:11px;}
+.step-desc a{color:var(--info);text-decoration:none;}
+.step-desc a:hover{text-decoration:underline;}
+.copy-btn{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10px;color:var(--muted);cursor:pointer;transition:all .15s;}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* Code block */
+.code-block{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:13px 14px;font-family:var(--mono);font-size:11px;color:var(--accent);line-height:1.7;margin:8px 0;overflow-x:auto;white-space:pre;}
+
+/* Reminders panel */
+.reminders-panel{position:fixed;right:0;top:0;height:100vh;width:320px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;z-index:50;transform:translateX(100%);transition:transform .3s ease;}
+.reminders-panel.open{transform:translateX(0);}
+.rp-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.rp-title{font-family:var(--serif);font-size:17px;font-weight:300;}
+.rp-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;}
+.rp-body{flex:1;overflow-y:auto;padding:14px;}
+.reminder-card{background:var(--bg3);border-radius:7px;padding:12px;margin-bottom:10px;border-left:3px solid var(--muted);}
+.reminder-card.urgent{border-left-color:var(--danger);}
+.reminder-card.warn{border-left-color:var(--warn);}
+.reminder-card.info{border-left-color:var(--info);}
+.reminder-card.done{border-left-color:var(--green);opacity:.45;}
+.reminder-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;}
+.reminder-body{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:6px;}
+.reminder-meta{font-family:var(--mono);font-size:9px;color:var(--muted);}
+.reminder-actions{display:flex;gap:6px;margin-top:8px;}
+.rbtn{padding:4px 10px;border-radius:4px;font-family:var(--mono);font-size:10px;cursor:pointer;border:none;transition:all .15s;}
+.rbtn-done{background:rgba(90,240,180,0.15);color:var(--green);}
+.rbtn-snooze{background:rgba(255,255,255,0.06);color:var(--muted);}
+.rbtn-done:hover{background:rgba(90,240,180,0.25);}
+.rbtn-snooze:hover{background:rgba(255,255,255,0.1);}
+.rp-footer{padding:12px 14px;border-top:1px solid var(--border);}
+.rp-input-wrap{display:flex;gap:8px;}
+.rp-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:7px 10px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;}
+.rp-input:focus{border-color:var(--accent);}
+.rp-send{padding:7px 12px;background:var(--accent);border:none;border-radius:5px;color:#0e0f0d;font-family:var(--mono);font-size:11px;font-weight:500;cursor:pointer;}
+
+/* Guide overlay */
+.guide-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;align-items:center;justify-content:center;}
+.guide-overlay.open{display:flex;}
+.guide-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:660px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+.guide-header{padding:24px 26px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;}
+.guide-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;}
+.guide-body{padding:22px 26px;}
+.guide-section{margin-bottom:26px;}
+.guide-section-title{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.guide-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.guide-step{display:flex;gap:12px;margin-bottom:11px;}
+.gsn{width:22px;height:22px;border-radius:50%;background:rgba(200,240,90,0.15);color:var(--accent);font-family:var(--mono);font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.gst{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.gsd{font-size:12px;color:var(--muted);line-height:1.65;}
+.gsd code{font-family:var(--mono);background:var(--bg3);padding:1px 5px;border-radius:3px;color:var(--accent);font-size:11px;}
+
+/* Modals */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:24px;width:440px;max-width:92vw;max-height:88vh;overflow-y:auto;}
+.modal-title{font-family:var(--serif);font-size:19px;font-weight:300;margin-bottom:18px;}
+.form-row{margin-bottom:12px;}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.form-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:4px;}
+.form-input,.form-select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:8px 11px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s;}
+.form-input:focus,.form-select:focus{border-color:var(--accent);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+.btn-cancel{padding:7px 16px;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;}
+.btn-cancel:hover{border-color:var(--border2);color:var(--text);}
+.btn-primary{padding:7px 16px;background:var(--accent);border:none;border-radius:5px;color:#0e0f0d;font-family:var(--mono);font-size:11px;font-weight:500;cursor:pointer;}
+.btn-primary:hover{opacity:.85;}
+
+/* Reminder bell */
+.reminder-trigger{position:fixed;bottom:28px;right:28px;width:46px;height:46px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 18px rgba(200,240,90,0.3);z-index:40;border:none;transition:transform .15s;}
+.reminder-trigger:hover{transform:scale(1.08);}
+.reminder-badge{position:absolute;top:-2px;right:-2px;background:var(--danger);color:#fff;font-size:9px;font-family:var(--mono);width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+
+[contenteditable="true"]{outline:none;border-bottom:1px dashed transparent;transition:border-color .15s;}
+[contenteditable="true"]:focus{border-bottom-color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ── Sidebar ─────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">Burrows & Co.</div>
+    <div class="logo-sub">CFO Command · v5</div>
+    <div class="sync-status">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncLabel">Local only · not yet deployed</span>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="nav('dashboard',this)">
+      <svg class="nav-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/><rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/></svg>
+      Dashboard
+      <span class="nav-badge warn" id="alertCount">3</span>
+    </div>
+    <div class="nav-item" onclick="nav('revenue',this)">
+      <svg class="nav-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><polyline points="1,10 4,6 7,8 10,4 13,2"/></svg>
+      Revenue & Waterfall
+    </div>
+    <div class="nav-section">Operations</div>
+    <div class="nav-item" onclick="nav('client',this)">
+      <svg class="nav-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="4" r="2.5"/><path d="M1 13c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5"/></svg>
+      Client · ChildPilot
+    </div>
+    <div class="nav-item" onclick="nav('hours',this)">
+      <svg class="nav-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="5.5"/><polyline points="7,3.5 7,7 9.5,9"/></svg>
+      Hours & Capacity
+    </div>
+    <div class="nav-item" onclick="nav('pipeline',this)">
+      <svg class="nav-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="4" width="3" height="7" rx="1"/><rect x="5.5" y="2" width="3" height="9" rx="1"/><rect x="10" y="5" width="3" height="6" rx="1"/></svg>
+      Pipeline
+    </div>
+    <div class="nav-section">Finance</div>
+    <div class="nav-item" onclick="nav('cashflow',this)">
+      <svg class="nav-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="3" width="12" height="8" rx="1.5"/><line x1="1" y1="6" x2="13" y2="6"/></svg>
+      Cash Flow
+    </div>
+    <div class="nav-item" onclick="nav('expenses',this)">
+      <svg class="nav-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="1" width="10" height="12" rx="1.5"/><line x1="4" y1="4" x2="10" y2="4"/><line x1="4" y1="7" x2="10" y2="7"/><line x1="4" y1="10" x2="7" y2="10"/></svg>
+      Expenses
+      <span class="nav-badge" id="expBadge">!</span>
+    </div>
+    <div class="nav-item" onclick="nav('subscriptions',this)">
+      <svg class="nav-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="5.5"/><polyline points="5,7 6.5,8.5 9,5.5"/></svg>
+      Subscriptions
+    </div>
+    <div class="nav-item" onclick="nav('partners',this)">
+      <svg class="nav-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="4" cy="4" r="2"/><circle cx="10" cy="4" r="2"/><path d="M1 13c0-2.2 1.3-4 3-4"/><path d="M13 13c0-2.2-1.3-4-3-4"/><path d="M5.5 13c0-2 .7-4 1.5-4s1.5 2 1.5 4"/></svg>
+      Partner Split
+    </div>
+    <div class="nav-section">System</div>
+    <div class="nav-item" onclick="nav('sheets',this)">
+      <svg class="nav-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="12" height="12" rx="1.5"/><line x1="1" y1="5" x2="13" y2="5"/><line x1="5" y1="5" x2="5" y2="13"/></svg>
+      Sheets Sync
+    </div>
+    <div class="nav-item" onclick="nav('deploy',this)">
+      <svg class="nav-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><polyline points="7,1 7,9"/><polyline points="4,4 7,1 10,4"/><path d="M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2"/></svg>
+      Deploy & Maintain
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div style="font-size:9px;color:var(--muted);margin-bottom:6px;font-family:var(--mono);letter-spacing:.08em;">PERIOD VIEW</div>
+    <div class="period-selector">
+      <button class="period-btn" onclick="setPeriod('W',this)">W</button>
+      <button class="period-btn active" onclick="setPeriod('M',this)">M</button>
+      <button class="period-btn" onclick="setPeriod('Q',this)">Q</button>
+    </div>
+    <button class="guide-btn" onclick="openGuide()">
+      <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5.5"/><path d="M7 10V7"/><circle cx="7" cy="4.5" r=".5" fill="currentColor"/></svg>
+      How to use this bot
+    </button>
+  </div>
+  <div class="auth-bar">
+    <div class="avatar av-p" id="authAvatar">?</div>
+    <div class="auth-name" id="authName">Not signed in</div>
+    <button class="auth-btn" id="authBtn" onclick="toggleAuth()">Sign in</button>
+  </div>
+</aside>
+
+<!-- ── Main ──────────────────────────────────────────────────── -->
+<main class="main">
+
+<!-- ═══ DASHBOARD ═══ -->
+<div id="view-dashboard" class="view active">
+  <div class="topbar">
+    <div>
+      <div class="page-title">Financial <em>Command</em></div>
+      <div class="page-sub">Burrows & Co. · April 2026 · Click any value to edit inline</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="btn-primary" onclick="toggleReminders()" style="font-size:11px;padding:6px 14px;">🔔 <span id="bellLabel">3 actions</span></button>
+      <div class="date-badge" id="dateBadge">—</div>
+    </div>
+  </div>
+  <div class="banner banner-danger">
+    <div class="banner-icon">!</div>
+    <div class="banner-text"><strong>$1,432.81 Zoetis expenses not submitted.</strong> Mindy's NJ workshop — flight $582.80 · hotel $590.46 · transport $203.78 · meals $55.35 — all on personal card, none submitted to Zoetis.</div>
+  </div>
+  <div class="health-bar">
+    <div class="health-dot" style="background:var(--warn);box-shadow:0 0 10px var(--warn);"></div>
+    <div class="health-text"><strong style="color:var(--warn);">1 client · $6,800/mo · $29,700 gap to Q2 target</strong> · Burn $392/mo · Zoetis stalled · $1,433 unreimbursed</div>
+    <div style="text-align:right;">
+      <div class="health-score" style="color:var(--warn);">52</div>
+      <div class="health-label">HEALTH /100</div>
+    </div>
+  </div>
+  <div class="section-header"><span class="section-title">Key metrics — April 2026</span></div>
+  <div class="metrics-grid g4">
+    <div class="metric-card">
+      <div class="metric-label">Monthly Revenue</div>
+      <div class="metric-value" style="color:var(--warn);" contenteditable="true" onblur="saveField('rev',this)">$6,800</div>
+      <div class="metric-sub">Q2 target: $36,500/mo</div>
+      <div class="metric-delta dw">▼ $29,700 gap</div>
+      <div class="metric-bar" style="width:18.6%;background:var(--warn);"></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Active Clients</div>
+      <div class="metric-value">1</div>
+      <div class="metric-sub">ChildPilot · retainer live</div>
+      <div class="metric-delta dw">▲ Need 2–3 more Q2</div>
+      <div class="metric-bar" style="width:10%;background:var(--accent);"></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Monthly Burn</div>
+      <div class="metric-value" style="color:var(--danger);" contenteditable="true" onblur="saveField('burn',this)">$392</div>
+      <div class="metric-sub">Subscriptions · YTD $4,588</div>
+      <div class="metric-delta dd">▼ Add sub line items →</div>
+      <div class="metric-bar" style="width:100%;background:var(--danger);"></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Net This Month</div>
+      <div class="metric-value" style="color:var(--accent);" id="m-net">$6,408</div>
+      <div class="metric-sub">Before distributions</div>
+      <div class="metric-delta du">▲ $3,204 each (50/50)</div>
+      <div class="metric-bar" style="width:94%;background:var(--green);"></div>
+    </div>
+  </div>
+  <div class="banner banner-accent">
+    <div class="banner-icon">✦</div>
+    <div class="banner-text"><strong>CFO Insight · April 2026 —</strong> 1 active client, $6,800/mo. Q2 requires 2–3 new engagements — gap is $29,700. Zoetis re-engagement is the fastest lever. <strong style="color:var(--danger);">Most urgent: submit $1,432.81 Zoetis expense report.</strong> Net $6,408 → $3,204 each at 50/50. Drop subscription CSV to complete the data picture.</div>
+  </div>
+  <div class="two-col">
+    <div>
+      <div class="section-header"><span class="section-title">Client</span><button class="section-action" onclick="nav('client',null)">Detail →</button></div>
+      <div class="data-table">
+        <div class="table-row" style="grid-template-columns:55px 120px 1fr 90px 80px;padding:8px 16px;">
+          <div class="th">ID</div><div class="th">Client</div><div class="th">Phase</div><div class="th">Revenue</div><div class="th">Health</div>
+        </div>
+        <div class="table-row clickable" style="grid-template-columns:55px 120px 1fr 90px 80px;" onclick="nav('client',null)">
+          <div class="td m">CL001</div><div class="td">ChildPilot</div>
+          <div class="td m" style="font-size:11px;">Active retainer</div>
+          <div class="td" style="color:var(--green);">$6,800</div>
+          <div><span class="pill pg"><span class="pill-dot"></span>On track</span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="section-header"><span class="section-title">Pipeline</span><button class="section-action" onclick="nav('pipeline',null)">All →</button></div>
+      <div class="data-table">
+        <div class="table-row" style="grid-template-columns:120px 1fr 90px 70px;padding:8px 16px;">
+          <div class="th">Prospect</div><div class="th">Type</div><div class="th">Potential</div><div class="th">Stage</div>
+        </div>
+        <div class="table-row clickable" style="grid-template-columns:120px 1fr 90px 70px;" onclick="nav('pipeline',null)">
+          <div class="td">Zoetis</div><div class="td m" style="font-size:11px;">Core Leadership</div>
+          <div class="td" style="color:var(--accent);">$22,500</div>
+          <div><span class="pill pd"><span class="pill-dot"></span>Stalled</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ REVENUE ═══ -->
+<div id="view-revenue" class="view">
+  <div class="topbar"><div><div class="page-title">Revenue <em>Waterfall</em></div><div class="page-sub">2026 ramp · $1.36M gross target</div></div><div class="date-badge">2026 Plan</div></div>
+  <div class="banner banner-accent"><div class="banner-icon">✦</div><div class="banner-text"><strong>Model:</strong> $1,357,500 full-year gross if ramp executes. At $6,800 now (ChildPilot only). Q2 requires +1 Light Advisory ($10K) + +1 Core Leadership ($22.5K). Zoetis activation alone closes most of Q2 gap. 50/50 = $678,750 each at full year.</div></div>
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-title">Monthly revenue by quarter</div>
+    <div class="wf-row"><div class="wf-label">Now (Apr)</div><div class="wf-bar-wrap"><div class="wf-bar" style="width:3.6%;background:var(--danger);"></div></div><div class="wf-val" style="color:var(--danger);">$6,800</div></div>
+    <div class="wf-row"><div class="wf-label">Q2 target</div><div class="wf-bar-wrap"><div class="wf-bar" style="width:19.3%;background:var(--warn);"></div></div><div class="wf-val" style="color:var(--warn);">$36,500</div></div>
+    <div class="wf-row"><div class="wf-label">Q3 target</div><div class="wf-bar-wrap"><div class="wf-bar" style="width:80.1%;background:var(--accent);"></div></div><div class="wf-val" style="color:var(--accent);">$151,500</div></div>
+    <div class="wf-row"><div class="wf-label">Q4 target</div><div class="wf-bar-wrap"><div class="wf-bar" style="width:100%;background:var(--green);"></div></div><div class="wf-val" style="color:var(--green);">$189,000</div></div>
+  </div>
+  <div class="two-col">
+    <div class="panel"><div class="panel-title">Clients needed</div>
+      <div class="cash-row"><span class="cash-label">Light Advisory ($10K/mo)</span><span class="cash-amt" style="color:var(--info);">+4 by Q4</span></div>
+      <div class="cash-row"><span class="cash-label">Core Leadership ($22.5K/mo)</span><span class="cash-amt" style="color:var(--accent);">+4 by Q4</span></div>
+      <div class="cash-row"><span class="cash-label">Deep Embed ($45K/mo)</span><span class="cash-amt" style="color:var(--green);">+1 in Q3</span></div>
+      <div class="cash-row"><span class="cash-label">Sprint / Workshop</span><span class="cash-amt m">$2.5–5K/mo</span></div>
+      <div class="cash-row cash-total"><span class="cash-label" style="color:var(--text);">Full year gross</span><span class="cash-amt" style="color:var(--green);font-size:15px;">$1,357,500</span></div>
+    </div>
+    <div class="panel"><div class="panel-title">Partner share at milestones (50/50)</div>
+      <div class="cash-row"><span class="cash-label">Now — each</span><span class="cash-amt" style="color:var(--warn);">$3,204/mo</span></div>
+      <div class="cash-row"><span class="cash-label">Q2 — each</span><span class="cash-amt" style="color:var(--accent);">$18,054/mo</span></div>
+      <div class="cash-row"><span class="cash-label">Q3 — each</span><span class="cash-amt" style="color:var(--green);">$75,554/mo</span></div>
+      <div class="cash-row"><span class="cash-label">Q4 — each</span><span class="cash-amt" style="color:var(--green);">$94,304/mo</span></div>
+      <div class="cash-row cash-total"><span class="cash-label" style="color:var(--text);">Full year — each</span><span class="cash-amt" style="color:var(--green);font-size:15px;">$678,750</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CLIENT ═══ -->
+<div id="view-client" class="view">
+  <div class="topbar"><div><div class="page-title">ChildPilot <em>Account</em></div><div class="page-sub">Only active client · Phase 1 complete · Phase 2 live</div></div>
+    <button class="btn-primary" onclick="document.getElementById('addClientModal').classList.add('open')">+ Add client</button>
+  </div>
+  <div class="banner banner-info"><div class="banner-icon">i</div><div class="banner-text"><strong>Phase 1 complete.</strong> Discovery & Strategy Sprint done. Phase 2 (Active Monthly Retainer) is now live. CL001 = sprint · CL002 = retainer. One client, two phases.</div></div>
+  <div class="two-col">
+    <div class="panel"><div class="panel-title">Phase 1 · Discovery Sprint <span><span class="pill pm"><span class="pill-dot"></span>Complete</span></span></div>
+      <div class="cash-row"><span class="cash-label">ID</span><span class="cash-amt m">CL001</span></div>
+      <div class="cash-row"><span class="cash-label">Type</span><span class="cash-amt m">Sprint → Monthly</span></div>
+      <div class="cash-row"><span class="cash-label">Period</span><span class="cash-amt m">Feb 16 – Mar 17</span></div>
+      <div class="cash-row"><span class="cash-label">Hours</span><span class="cash-amt">10h</span></div>
+      <div class="cash-row"><span class="cash-label">Revenue</span><span class="cash-amt" style="color:var(--accent);" contenteditable="true">$4,000</span></div>
+      <div class="cash-row"><span class="cash-label">Contact</span><span class="cash-amt m" style="font-size:11px;" contenteditable="true">neida@childpilot.com · 469-767-2548</span></div>
+    </div>
+    <div class="panel"><div class="panel-title">Phase 2 · Monthly Retainer <span><span class="pill pg"><span class="pill-dot"></span>Live</span></span></div>
+      <div class="cash-row"><span class="cash-label">ID</span><span class="cash-amt m">CL002</span></div>
+      <div class="cash-row"><span class="cash-label">Type</span><span class="cash-amt m">Monthly Retainer – Light</span></div>
+      <div class="cash-row"><span class="cash-label">Period</span><span class="cash-amt m">Mar 23 – Apr 23</span></div>
+      <div class="cash-row"><span class="cash-label">Hours</span><span class="cash-amt" contenteditable="true">TBD — click to update</span></div>
+      <div class="cash-row"><span class="cash-label">Revenue</span><span class="cash-amt" style="color:var(--accent);" contenteditable="true">$2,800</span></div>
+      <div class="cash-row"><span class="cash-label">Next renewal</span><span class="cash-amt" style="color:var(--green);">Apr 23 · ~17 days</span></div>
+    </div>
+  </div>
+  <div id="additionalClients"></div>
+</div>
+
+<!-- ═══ HOURS ═══ -->
+<div id="view-hours" class="view">
+  <div class="topbar"><div><div class="page-title">Hours & <em>Capacity</em></div><div class="page-sub">Team utilization · MTD</div></div>
+    <button class="btn-primary" onclick="document.getElementById('addHoursModal').classList.add('open')">+ Log hours</button>
+  </div>
+  <div class="two-col">
+    <div class="panel"><div class="panel-title">Team — MTD</div><div id="hoursBreakdown"></div></div>
+    <div class="panel"><div class="panel-title">By client</div>
+      <div class="hr-row"><div class="hr-name">ChildPilot P1</div><div class="hr-bar-wrap"><div class="hr-bar" style="width:100%;"></div></div><div class="hr-num">10h / 10h</div></div>
+      <div class="hr-row"><div class="hr-name">ChildPilot P2</div><div class="hr-bar-wrap"><div class="hr-bar" style="width:0%;"></div></div><div class="hr-num">0h / TBD</div></div>
+      <div class="hr-row"><div class="hr-name">Zoetis workshop</div><div class="hr-bar-wrap"><div class="hr-bar" style="width:60%;background:var(--info);"></div></div><div class="hr-num">event</div></div>
+      <div class="hr-row"><div class="hr-name">Internal / BD</div><div class="hr-bar-wrap"><div class="hr-bar" style="width:20%;background:var(--muted);"></div></div><div class="hr-num">unbillable</div></div>
+    </div>
+  </div>
+  <div class="panel"><div class="panel-title">Hours log</div><div id="hoursLog"></div></div>
+</div>
+
+<!-- ═══ PIPELINE ═══ -->
+<div id="view-pipeline" class="view">
+  <div class="topbar"><div><div class="page-title">New Business <em>Pipeline</em></div><div class="page-sub">Prospects · Q2 targets</div></div>
+    <button class="btn-primary" onclick="document.getElementById('addPipelineModal').classList.add('open')">+ Add prospect</button>
+  </div>
+  <div class="banner banner-warn"><div class="banner-icon">→</div><div class="banner-text"><strong>Q2 gap: $29,700/mo.</strong> ~1 Core Leadership ($22.5K) + 1 Light Advisory ($10K) closes it. Zoetis activation covers most of it alone.</div></div>
+  <div class="data-table">
+    <div class="table-row" style="grid-template-columns:140px 140px 110px 120px 80px 1fr;padding:8px 16px;">
+      <div class="th">Company</div><div class="th">Type</div><div class="th">Potential/mo</div><div class="th">Last contact</div><div class="th">Stage</div><div class="th">Notes</div>
+    </div>
+    <div id="pipelineRows"></div>
+  </div>
+</div>
+
+<!-- ═══ CASH FLOW ═══ -->
+<div id="view-cashflow" class="view">
+  <div class="topbar"><div><div class="page-title">Cash <em>Flow</em></div><div class="page-sub">Revenue · Burn · Net · YTD</div></div></div>
+  <div class="metrics-grid g3">
+    <div class="metric-card"><div class="metric-label">Revenue · April</div><div class="metric-value" style="color:var(--green);" contenteditable="true">$6,800</div><div class="metric-sub">ChildPilot retainer</div><div class="metric-bar" style="width:100%;background:var(--green);"></div></div>
+    <div class="metric-card"><div class="metric-label">Costs · April</div><div class="metric-value" style="color:var(--danger);" contenteditable="true">$392</div><div class="metric-sub">Subscriptions only</div><div class="metric-bar" style="width:100%;background:var(--danger);"></div></div>
+    <div class="metric-card"><div class="metric-label">Net · April</div><div class="metric-value" style="color:var(--accent);">$6,408</div><div class="metric-sub">Before distributions</div><div class="metric-bar" style="width:94%;background:var(--accent);"></div></div>
+  </div>
+  <div class="two-col">
+    <div class="panel"><div class="panel-title">Monthly P&L</div>
+      <div class="cash-row"><span class="cash-label">ChildPilot Phase 1</span><span class="cash-amt m">$4,000 (done)</span></div>
+      <div class="cash-row"><span class="cash-label">ChildPilot Phase 2 retainer</span><span class="cash-amt" style="color:var(--green);">$2,800</span></div>
+      <div class="cash-row"><span class="cash-label">Zoetis</span><span class="cash-amt m">$0 · stalled</span></div>
+      <div class="cash-row"><span class="cash-label" style="color:var(--text);">Total revenue</span><span class="cash-amt" style="color:var(--accent);">$6,800</span></div>
+      <div class="cash-row" style="margin-top:4px;"><span class="cash-label">Subscriptions</span><span class="cash-amt" style="color:var(--danger);">-$392</span></div>
+      <div class="cash-row cash-total"><span class="cash-label" style="color:var(--text);">Net operating</span><span class="cash-amt" style="color:var(--accent);font-size:15px;">$6,408</span></div>
+    </div>
+    <div class="panel"><div class="panel-title">YTD</div>
+      <div class="cash-row"><span class="cash-label">YTD revenue</span><span class="cash-amt" style="color:var(--accent);" contenteditable="true">$0 — update me</span></div>
+      <div class="cash-row"><span class="cash-label">YTD subscriptions</span><span class="cash-amt" style="color:var(--danger);">-$4,588</span></div>
+      <div class="cash-row"><span class="cash-label">Zoetis reimbursable</span><span class="cash-amt" style="color:var(--warn);">+$1,433 pending</span></div>
+      <div class="cash-row"><span class="cash-label">ChildPilot mileage</span><span class="cash-amt m">$107.20</span></div>
+      <div class="cash-row cash-total"><span class="cash-label" style="color:var(--text);">YTD net</span><span class="cash-amt" style="color:var(--danger);font-size:15px;">-$4,588</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EXPENSES ═══ -->
+<div id="view-expenses" class="view">
+  <div class="topbar"><div><div class="page-title">Expense <em>Tracker</em></div><div class="page-sub">Travel · Mileage · Pass-through</div></div>
+    <button class="btn-primary" onclick="document.getElementById('addExpenseModal').classList.add('open')">+ Log expense</button>
+  </div>
+  <div class="banner banner-danger"><div class="banner-icon">!</div><div class="banner-text"><strong>Zoetis NJ Workshop — $1,432.81 NOT SUBMITTED.</strong> All Mindy's personal card. Submit to Zoetis for agency reimbursement this week.</div></div>
+  <div class="data-table">
+    <div class="table-row" style="grid-template-columns:90px 1fr 120px 85px 110px;padding:8px 16px;">
+      <div class="th">Date</div><div class="th">Description</div><div class="th">Client</div><div class="th">Amount</div><div class="th">Status</div>
+    </div>
+    <div id="expenseRows"></div>
+  </div>
+  <div class="two-col">
+    <div class="panel"><div class="panel-title">By category</div>
+      <div class="cash-row"><span class="cash-label">Air/Rail (Zoetis)</span><span class="cash-amt" style="color:var(--warn);">$582.80</span></div>
+      <div class="cash-row"><span class="cash-label">Hotel (Zoetis)</span><span class="cash-amt" style="color:var(--warn);">$590.46</span></div>
+      <div class="cash-row"><span class="cash-label">Ground + parking</span><span class="cash-amt" style="color:var(--warn);">$203.78</span></div>
+      <div class="cash-row"><span class="cash-label">Meals</span><span class="cash-amt" style="color:var(--warn);">$55.35</span></div>
+      <div class="cash-row"><span class="cash-label">Mileage (ChildPilot)</span><span class="cash-amt m">$107.20</span></div>
+      <div class="cash-row cash-total"><span class="cash-label" style="color:var(--text);">Total outstanding</span><span class="cash-amt" style="color:var(--danger);font-size:15px;">$1,540.01</span></div>
+    </div>
+    <div class="panel"><div class="panel-title">Reimbursement status</div>
+      <div class="cash-row"><span class="cash-label">Agency reimbursable (Zoetis)</span><span class="cash-amt" style="color:var(--danger);">$1,432.81 NOT SUBMITTED</span></div>
+      <div class="cash-row"><span class="cash-label">Submitted</span><span class="cash-amt m">$0</span></div>
+      <div class="cash-row"><span class="cash-label">Reimbursed</span><span class="cash-amt m">$0</span></div>
+      <div class="cash-row cash-total"><span class="cash-label" style="color:var(--danger);">Action required</span><span class="cash-amt" style="color:var(--danger);">Submit $1,432.81 now</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SUBSCRIPTIONS ═══ -->
+<div id="view-subscriptions" class="view">
+  <div class="topbar"><div><div class="page-title">Subscription <em>Costs</em></div><div class="page-sub">$392.30/mo confirmed · Add line items below</div></div>
+    <button class="btn-primary" onclick="document.getElementById('addSubModal').classList.add('open')">+ Add tool</button>
+  </div>
+  <div class="banner banner-warn"><div class="banner-icon">↻</div><div class="banner-text"><strong>$392.30/mo confirmed.</strong> Publish your subscriptions sheet tab as CSV (see Sheets Sync) to auto-populate this view. Or add tools manually below — bot is the source of truth.</div></div>
+  <div class="data-table">
+    <div class="table-row" style="grid-template-columns:1fr 90px 90px 90px;padding:8px 16px;">
+      <div class="th">Tool / Service</div><div class="th">Billing</div><div class="th">Monthly</div><div class="th">Category</div>
+    </div>
+    <div id="subRows"></div>
+  </div>
+  <div class="panel" style="max-width:380px;">
+    <div class="panel-title">Summary</div>
+    <div class="cash-row"><span class="cash-label">Monthly total</span><span class="cash-amt" style="color:var(--danger);" id="subTotal">$392.30</span></div>
+    <div class="cash-row"><span class="cash-label">YTD (Jan–Apr)</span><span class="cash-amt" style="color:var(--danger);">$4,588.00</span></div>
+    <div class="cash-row"><span class="cash-label">Annual run rate</span><span class="cash-amt m">$4,707.60</span></div>
+  </div>
+</div>
+
+<!-- ═══ PARTNERS ═══ -->
+<div id="view-partners" class="view">
+  <div class="topbar"><div><div class="page-title">Partner <em>Distribution</em></div><div class="page-sub">50/50 · Phil Burrows & Mindy Stotz</div></div></div>
+  <div class="banner banner-accent"><div class="banner-icon">✦</div><div class="banner-text"><strong>April net: $6,408 → $3,204 each.</strong> YTD negative due to subscription burn with no revenue logged yet. Mindy's Zoetis $1,432.81 is a direct reimbursement from Zoetis — separate from partner distributions.</div></div>
+  <div class="panel" style="max-width:480px;margin-bottom:20px;">
+    <div class="panel-title">April 2026 distribution</div>
+    <div class="partner-row">
+      <div class="avatar av-p">PB</div>
+      <div style="flex:1;"><div style="font-size:13px;">Phil Burrows</div><div style="font-size:10px;color:var(--muted);font-family:var(--mono);">Partner · 50%</div></div>
+      <div style="text-align:right;"><div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--accent);">$3,204</div><div style="font-size:10px;color:var(--muted);font-family:var(--mono);">of $6,408 net</div></div>
+    </div>
+    <div class="partner-row">
+      <div class="avatar av-m">MS</div>
+      <div style="flex:1;"><div style="font-size:13px;">Mindy Stotz</div><div style="font-size:10px;color:var(--muted);font-family:var(--mono);">Partner · 50%</div></div>
+      <div style="text-align:right;"><div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--info);">$3,204</div><div style="font-size:10px;color:var(--muted);font-family:var(--mono);">of $6,408 net</div></div>
+    </div>
+  </div>
+  <div class="three-col">
+    <div class="panel"><div class="panel-title">At Q2</div>
+      <div class="cash-row"><span class="cash-label">Net</span><span class="cash-amt" style="color:var(--accent);">$36,108</span></div>
+      <div class="cash-row"><span class="cash-label">Each</span><span class="cash-amt" style="color:var(--accent);">$18,054</span></div>
+    </div>
+    <div class="panel"><div class="panel-title">At Q3</div>
+      <div class="cash-row"><span class="cash-label">Net</span><span class="cash-amt" style="color:var(--green);">$151,108</span></div>
+      <div class="cash-row"><span class="cash-label">Each</span><span class="cash-amt" style="color:var(--green);">$75,554</span></div>
+    </div>
+    <div class="panel"><div class="panel-title">Full year</div>
+      <div class="cash-row"><span class="cash-label">Gross</span><span class="cash-amt" style="color:var(--green);">$1,357,500</span></div>
+      <div class="cash-row"><span class="cash-label">Each</span><span class="cash-amt" style="color:var(--green);">$678,750</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SHEETS SYNC ═══ -->
+<div id="view-sheets" class="view">
+  <div class="topbar"><div><div class="page-title">Google Sheets <em>Sync</em></div><div class="page-sub">Connect live data · Override in bot anytime</div></div></div>
+  <div class="banner banner-info"><div class="banner-icon">i</div><div class="banner-text"><strong>How this works:</strong> Google Sheets are your source of truth for raw data. Once you publish a tab as a CSV URL, the bot can pull it live. You can always override any value directly in the bot — bot overrides take priority over sheet data for that field.</div></div>
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-title">How to get a live CSV URL from Google Sheets</div>
+    <div style="display:flex;flex-direction:column;gap:13px;margin-top:2px;">
+      <div class="deploy-step" style="padding:10px 0;">
+        <div class="step-num active">1</div>
+        <div><div class="step-title">Open the sheet · click the specific tab you want</div><div class="step-desc">Make sure you're on the tab (e.g. "Expense Log") — not just the sheet.</div></div>
+      </div>
+      <div class="deploy-step" style="padding:10px 0;">
+        <div class="step-num active">2</div>
+        <div><div class="step-title">File → Share → Publish to web</div><div class="step-desc">A dialog opens. First dropdown: select the tab name. Second dropdown: select <code>Comma-separated values (.csv)</code>. Hit Publish.</div></div>
+      </div>
+      <div class="deploy-step" style="padding:10px 0;">
+        <div class="step-num active">3</div>
+        <div><div class="step-title">Copy the URL it gives you · paste below</div><div class="step-desc">URL looks like: <code>https://docs.google.com/spreadsheets/d/...pub?gid=...&output=csv</code><br>This URL stays live — whenever your sheet updates, this bot can re-fetch it.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="section-header"><span class="section-title">Connected sheets</span></div>
+  <div class="data-table" style="margin-bottom:14px;">
+    <div class="table-row" style="grid-template-columns:160px 1fr 100px 80px;padding:8px 16px;">
+      <div class="th">Sheet / Tab</div><div class="th">Published CSV URL</div><div class="th">Last synced</div><div class="th">Status</div>
+    </div>
+    <div id="sheetRows"></div>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <input class="form-input" id="sheet-name" placeholder="Tab name (e.g. Expense Log)" style="width:180px;"/>
+    <input class="form-input" id="sheet-url" placeholder="Paste published CSV URL here..." style="flex:1;"/>
+    <button class="btn-primary" onclick="addSheet()">Connect</button>
+  </div>
+</div>
+
+<!-- ═══ DEPLOY & MAINTAIN ═══ -->
+<div id="view-deploy" class="view">
+  <div class="topbar"><div><div class="page-title">Deploy & <em>Maintain</em></div><div class="page-sub">Host it · Share it · Update it · Keep it running</div></div></div>
+
+  <div class="banner banner-purple"><div class="banner-icon">⚡</div><div class="banner-text"><strong>This is your operations manual for the CFO Bot.</strong> Everything you need to host it, share it with Mindy, update it, and keep it running long-term — all in one place. Do these steps once and you're set.</div></div>
+
+  <!-- SECTION 1: HOSTING -->
+  <div class="section-header" style="margin-top:4px;"><span class="section-title">Step 1 · Host it on GitHub Pages (free)</span></div>
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="deploy-step">
+      <div class="step-num active">1</div>
+      <div><div class="step-title">Create a free GitHub account</div>
+        <div class="step-desc">Go to <a href="https://github.com" target="_blank">github.com</a> → Sign up. Use your <code>philburrows@burrowsadvisory.com</code> Google Workspace email — you can sign in with Google.</div>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="step-num active">2</div>
+      <div><div class="step-title">Create a new repository called <code>cfo-command</code></div>
+        <div class="step-desc">Click the + icon → New repository. Name it <code>cfo-command</code>. Set it to <strong>Public</strong> (required for free GitHub Pages). Click Create repository.</div>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="step-num active">3</div>
+      <div><div class="step-title">Upload this HTML file</div>
+        <div class="step-desc">In your new repo, click "Add file" → "Upload files". Drag in this <code>cfo-bot-v5.html</code> file. <strong>Rename it to <code>index.html</code> before uploading</strong> — that's what GitHub Pages serves as the homepage. Commit the file.</div>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="step-num active">4</div>
+      <div><div class="step-title">Enable GitHub Pages</div>
+        <div class="step-desc">In your repo, go to Settings → Pages. Under "Branch", select <code>main</code> and <code>/ (root)</code>. Click Save. In ~60 seconds your URL is live at:<br>
+        <code>https://[your-github-username].github.io/cfo-command</code></div>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="step-num active">5</div>
+      <div><div class="step-title">Share the URL with Mindy</div>
+        <div class="step-desc">That URL works for anyone — no login required to view. Bookmark it in Chrome. Add it to your Google Workspace shared bookmark or a Notion page.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: FIREBASE -->
+  <div class="section-header"><span class="section-title">Step 2 · Add Firebase so edits sync between Phil & Mindy</span></div>
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="banner banner-info" style="margin-bottom:16px;"><div class="banner-icon">i</div><div class="banner-text"><strong>Without Firebase:</strong> you and Mindy see the same page but edits don't sync — if Phil adds a client, Mindy won't see it until the file is re-uploaded. Firebase fixes this in real time. Free tier handles your scale forever.</div></div>
+    <div class="deploy-step">
+      <div class="step-num active">1</div>
+      <div><div class="step-title">Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a></div>
+        <div class="step-desc">Sign in with your Google Workspace account. Click "Create a project" → name it <code>burrows-cfo</code> → Continue → disable Google Analytics (not needed) → Create project.</div>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="step-num active">2</div>
+      <div><div class="step-title">Add a web app + get your config</div>
+        <div class="step-desc">In Firebase console, click the <code>&lt;/&gt;</code> (Web) icon → Register app → name it <code>cfo-command</code>. Firebase shows you a config block. Copy it — it looks like this:</div>
+        <div class="code-block">const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "burrows-cfo.firebaseapp.com",
+  projectId: "burrows-cfo",
+  databaseURL: "https://burrows-cfo-default-rtdb.firebaseio.com"
+};</div>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="step-num active">3</div>
+      <div><div class="step-title">Enable Realtime Database</div>
+        <div class="step-desc">In Firebase console → Build → Realtime Database → Create database. Choose "Start in test mode" (you'll lock it down later). Click Enable.</div>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="step-num active">4</div>
+      <div><div class="step-title">Paste your config into this file — then bring it back to Claude</div>
+        <div class="step-desc">Open <code>cfo-bot-v5.html</code> in any text editor. Find the <code>FIREBASE_CONFIG</code> block at the top (line ~12). Replace the empty values with your real config. Save. Then come back to this Claude conversation and say <strong>"Firebase config added — wire it up"</strong> and I'll activate the real-time sync layer in the code.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: GOOGLE LOGIN -->
+  <div class="section-header"><span class="section-title">Step 3 · Add Google login (so you know who's editing)</span></div>
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="deploy-step">
+      <div class="step-num pending">1</div>
+      <div><div class="step-title">Enable Google Auth in Firebase</div>
+        <div class="step-desc">Firebase console → Build → Authentication → Get started → Sign-in method → Google → Enable → add your support email → Save.</div>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="step-num pending">2</div>
+      <div><div class="step-title">Tell Claude: "activate Google login"</div>
+        <div class="step-desc">Once Firebase config is in place, come back here and I'll add the Google sign-in flow. Phil and Mindy sign in with their <code>@burrowsadvisory.com</code> Google accounts. Edits are tagged with who made them.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: MAKING UPDATES -->
+  <div class="section-header"><span class="section-title">Step 4 · How to update this bot going forward</span></div>
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="deploy-step">
+      <div class="step-num active">A</div>
+      <div><div class="step-title">For data changes (new client, new number, new expense)</div>
+        <div class="step-desc">Do it directly in the bot — use the + buttons, inline edits, and forms. That's what they're for. Once Firebase is live, changes sync immediately for both partners.</div>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="step-num active">B</div>
+      <div><div class="step-title">For structural changes (new section, new field, layout)</div>
+        <div class="step-desc">Come back to <strong>this Claude conversation</strong> (bookmark it). Describe what you want: "Add an invoicing tab" or "add a contractor hours breakdown" — I'll update the code. Then re-upload to GitHub Pages (drag and drop, 30 seconds).</div>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="step-num active">C</div>
+      <div><div class="step-title">For bigger changes (new bot, Lead Gen Bot, etc.)</div>
+        <div class="step-desc">Use Claude Code — open your terminal, run <code>claude</code>, and describe what you want built. Claude Code has direct file access so it edits your files in place and you don't have to re-upload manually.</div>
+      </div>
+    </div>
+    <div class="deploy-step">
+      <div class="step-num active">D</div>
+      <div><div class="step-title">Keep this conversation as your "codebase"</div>
+        <div class="step-desc">This Claude.ai conversation has the full history of every version. Bookmark it at <code>claude.ai</code>. Any time you need changes, open it and continue from where we left off — I have full context on the whole project.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5: QUICK REFERENCE -->
+  <div class="section-header"><span class="section-title">Quick reference · URLs & tools</span></div>
+  <div class="panel">
+    <div class="cash-row"><span class="cash-label">GitHub Pages URL (after setup)</span><span class="cash-amt" style="color:var(--info);font-size:11px;" contenteditable="true">https://[username].github.io/cfo-command</span></div>
+    <div class="cash-row"><span class="cash-label">Firebase console</span><span class="cash-amt" style="color:var(--info);font-size:11px;">console.firebase.google.com</span></div>
+    <div class="cash-row"><span class="cash-label">GitHub repo</span><span class="cash-amt" style="color:var(--info);font-size:11px;" contenteditable="true">github.com/[username]/cfo-command</span></div>
+    <div class="cash-row"><span class="cash-label">This Claude conversation</span><span class="cash-amt" style="color:var(--accent);font-size:11px;">Bookmark it — this is your dev environment</span></div>
+    <div class="cash-row"><span class="cash-label">Next up: Lead Gen Bot</span><span class="cash-amt" style="color:var(--purple);font-size:11px;">Claude Code build · Apollo API + HubSpot MCP</span></div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- ── Reminders Panel ──────────────────────────────────────── -->
+<div class="reminders-panel" id="remindersPanel">
+  <div class="rp-header">
+    <div class="rp-title">Actions & Reminders</div>
+    <button class="rp-close" onclick="toggleReminders()">×</button>
+  </div>
+  <div class="rp-body" id="remindersList"></div>
+  <div class="rp-footer">
+    <div style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:7px;">ADD CUSTOM REMINDER</div>
+    <div class="rp-input-wrap">
+      <input class="rp-input" id="customReminder" placeholder="e.g. Follow up with Zoetis Friday..." />
+      <button class="rp-send" onclick="addCustomReminder()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Floating bell -->
+<button class="reminder-trigger" onclick="toggleReminders()">
+  <svg viewBox="0 0 20 20" fill="none" stroke="#0e0f0d" stroke-width="1.8" width="20" height="20">
+    <path d="M10 2a6 6 0 0 1 6 6c0 3.5 1.5 5 1.5 5h-15S4 11.5 4 8a6 6 0 0 1 6-6z"/>
+    <path d="M8.5 17a1.5 1.5 0 0 0 3 0"/>
+  </svg>
+  <div class="reminder-badge" id="reminderBadgeCount">3</div>
+</button>
+
+<!-- ── Guide Overlay ───────────────────────────────────────── -->
+<div class="guide-overlay" id="guideOverlay">
+  <div class="guide-modal">
+    <div class="guide-header">
+      <div>
+        <div style="font-family:var(--serif);font-size:22px;font-weight:300;">How to use CFO Command</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;font-family:var(--mono);">Burrows & Co. · Built for Phil & Mindy</div>
+      </div>
+      <button class="guide-close" onclick="document.getElementById('guideOverlay').classList.remove('open')">×</button>
+    </div>
+    <div class="guide-body">
+      <div class="guide-section">
+        <div class="guide-section-title">Daily use</div>
+        <div class="guide-step"><div class="gsn">1</div><div><div class="gst">Dashboard = home base</div><div class="gsd">Health score, metrics, and alerts front and center. Red = urgent, yellow = watch, green = fine.</div></div></div>
+        <div class="guide-step"><div class="gsn">2</div><div><div class="gst">Click any value to edit inline</div><div class="gsd">Any number with a dashed underline on hover is editable. Click, type, click away. No save button.</div></div></div>
+        <div class="guide-step"><div class="gsn">3</div><div><div class="gst">🔔 Bell = your action list</div><div class="gsd">Bottom-right floating button. Auto-reminders fire from your data. Add custom ones at the bottom of the panel. Mark done or snooze.</div></div></div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-title">Adding & updating data</div>
+        <div class="guide-step"><div class="gsn">+</div><div><div class="gst">Use the + buttons in each view</div><div class="gsd">Client → "+ Add client". Hours → "+ Log hours". Expenses → "+ Log expense". Subscriptions → "+ Add tool". Pipeline → "+ Add prospect".</div></div></div>
+        <div class="guide-step"><div class="gsn">↻</div><div><div class="gst">Google Sheets sync</div><div class="gsd">Publish any sheet tab as CSV (File → Share → Publish to web → CSV). Paste the URL in the Sheets Sync tab. Bot pulls live data on demand.</div></div></div>
+        <div class="guide-step"><div class="gsn">✎</div><div><div class="gst">Bot overrides always win</div><div class="gsd">If you edit a value directly in the bot, that takes priority over what's in Google Sheets. Bot is the source of truth for anything you've touched.</div></div></div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-title">Making code changes</div>
+        <div class="guide-step"><div class="gsn">A</div><div><div class="gst">Minor tweaks → back to Claude.ai</div><div class="gsd">Open this conversation, describe what you want changed. I update the code. You re-upload to GitHub Pages (30 sec).</div></div></div>
+        <div class="guide-step"><div class="gsn">B</div><div><div class="gst">Bigger builds → Claude Code</div><div class="gsd">Open terminal, run <code>claude</code>. Describe the feature. Claude Code edits files directly — no manual upload needed.</div></div></div>
+        <div class="guide-step"><div class="gsn">C</div><div><div class="gst">Full deploy guide → Deploy & Maintain tab</div><div class="gsd">Step-by-step instructions for GitHub Pages hosting, Firebase sync, and Google login are all in the Deploy & Maintain sidebar tab.</div></div></div>
+      </div>
+      <div class="guide-section">
+        <div class="guide-section-title">Weekly routine (5 min)</div>
+        <div class="guide-step"><div class="gsn">M</div><div><div class="gst">Monday: check the bell</div><div class="gsd">Open reminders. Clear red items. Check renewal dates.</div></div></div>
+        <div class="guide-step"><div class="gsn">W</div><div><div class="gst">Wednesday: log hours</div><div class="gsd">Phil and Mindy both update hours for the week.</div></div></div>
+        <div class="guide-step"><div class="gsn">F</div><div><div class="gst">Friday: pipeline & cash</div><div class="gsd">New prospects to add? Invoices to send? YTD numbers current?</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modals ──────────────────────────────────────────────── -->
+<div class="modal-overlay" id="addClientModal">
+  <div class="modal"><div class="modal-title">Add new client</div>
+    <div class="form-row"><label class="form-label">Client name</label><input class="form-input" id="fc-name" placeholder="e.g. Zoetis"/></div>
+    <div class="form-row"><label class="form-label">Engagement type</label><select class="form-select" id="fc-type"><option>Monthly Retainer – Light ($10K)</option><option>Monthly Retainer – Core ($22.5K)</option><option>Deep Embed ($45K)</option><option>Sprint / Workshop</option><option>Mixed / Custom</option></select></div>
+    <div class="form-row-2"><div><label class="form-label">Monthly revenue ($)</label><input class="form-input" id="fc-rev" type="number" placeholder="10000"/></div><div><label class="form-label">Hours / mo</label><input class="form-input" id="fc-hrs" type="number" placeholder="40"/></div></div>
+    <div class="form-row-2"><div><label class="form-label">Start date</label><input class="form-input" id="fc-start" type="date"/></div><div><label class="form-label">Renewal date</label><input class="form-input" id="fc-end" type="date"/></div></div>
+    <div class="form-row"><label class="form-label">Contact email</label><input class="form-input" id="fc-email" placeholder="contact@client.com"/></div>
+    <div class="modal-actions"><button class="btn-cancel" onclick="document.getElementById('addClientModal').classList.remove('open')">Cancel</button><button class="btn-primary" onclick="addClient()">Add client</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="addExpenseModal">
+  <div class="modal"><div class="modal-title">Log expense</div>
+    <div class="form-row-2"><div><label class="form-label">Date</label><input class="form-input" id="fe-date" type="date"/></div><div><label class="form-label">Amount ($)</label><input class="form-input" id="fe-amt" type="number" placeholder="0.00"/></div></div>
+    <div class="form-row"><label class="form-label">Description</label><input class="form-input" id="fe-desc" placeholder="e.g. Flight to NJ"/></div>
+    <div class="form-row-2"><div><label class="form-label">Client</label><input class="form-input" id="fe-client" placeholder="Zoetis"/></div><div><label class="form-label">Category</label><select class="form-select" id="fe-cat"><option>Air/Rail</option><option>Hotel/Lodging</option><option>Ground Transport</option><option>Meals & Food</option><option>Mileage</option><option>Parking</option><option>Subscription</option><option>Other</option></select></div></div>
+    <div class="form-row"><label class="form-label">Status</label><select class="form-select" id="fe-status"><option>Not Submitted</option><option>Submitted</option><option>Reimbursed</option><option>Internal / General</option></select></div>
+    <div class="modal-actions"><button class="btn-cancel" onclick="document.getElementById('addExpenseModal').classList.remove('open')">Cancel</button><button class="btn-primary" onclick="addExpense()">Log expense</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="addHoursModal">
+  <div class="modal"><div class="modal-title">Log hours</div>
+    <div class="form-row-2"><div><label class="form-label">Person</label><select class="form-select" id="fh-person"><option>Phil</option><option>Mindy</option><option>Contractor</option></select></div><div><label class="form-label">Hours</label><input class="form-input" id="fh-hrs" type="number" placeholder="4"/></div></div>
+    <div class="form-row"><label class="form-label">Client</label><select class="form-select" id="fh-client"><option>ChildPilot · Phase 2</option><option>ChildPilot · Phase 1</option><option>Internal / BD</option><option>Zoetis</option></select></div>
+    <div class="form-row"><label class="form-label">Task description</label><input class="form-input" id="fh-desc" placeholder="e.g. Strategy session"/></div>
+    <div class="modal-actions"><button class="btn-cancel" onclick="document.getElementById('addHoursModal').classList.remove('open')">Cancel</button><button class="btn-primary" onclick="addHours()">Log hours</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="addPipelineModal">
+  <div class="modal"><div class="modal-title">Add pipeline prospect</div>
+    <div class="form-row"><label class="form-label">Company name</label><input class="form-input" id="fp-name" placeholder="e.g. New Prospect Co."/></div>
+    <div class="form-row-2"><div><label class="form-label">Engagement type</label><select class="form-select" id="fp-type"><option>Light Advisory</option><option>Core Leadership</option><option>Deep Embed</option><option>Sprint</option></select></div><div><label class="form-label">Potential/mo ($)</label><input class="form-input" id="fp-rev" type="number" placeholder="10000"/></div></div>
+    <div class="form-row-2"><div><label class="form-label">Stage</label><select class="form-select" id="fp-stage"><option>Prospect</option><option>Intro call</option><option>Proposal sent</option><option>Negotiating</option><option>Stalled</option></select></div><div><label class="form-label">Last contact</label><input class="form-input" id="fp-date" type="date"/></div></div>
+    <div class="form-row"><label class="form-label">Notes</label><input class="form-input" id="fp-notes" placeholder="e.g. Workshop done, awaiting budget"/></div>
+    <div class="modal-actions"><button class="btn-cancel" onclick="document.getElementById('addPipelineModal').classList.remove('open')">Cancel</button><button class="btn-primary" onclick="addPipeline()">Add prospect</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="addSubModal">
+  <div class="modal"><div class="modal-title">Add subscription</div>
+    <div class="form-row"><label class="form-label">Tool / service</label><input class="form-input" id="fs-name" placeholder="e.g. Claude Pro"/></div>
+    <div class="form-row-2"><div><label class="form-label">Monthly cost ($)</label><input class="form-input" id="fs-cost" type="number" placeholder="20"/></div><div><label class="form-label">Billing</label><select class="form-select" id="fs-billing"><option>Monthly</option><option>Annual (÷12)</option></select></div></div>
+    <div class="form-row"><label class="form-label">Category</label><select class="form-select" id="fs-cat"><option>AI / Productivity</option><option>CRM / Sales</option><option>Design</option><option>Communication</option><option>Finance</option><option>Other</option></select></div>
+    <div class="modal-actions"><button class="btn-cancel" onclick="document.getElementById('addSubModal').classList.remove('open')">Cancel</button><button class="btn-primary" onclick="addSub()">Add</button></div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────
+const S = {
+  team:[{name:'Phil Burrows',hrs:6,target:80},{name:'Mindy Stotz',hrs:4,target:80},{name:'Contractors',hrs:0,target:0}],
+  hoursLog:[
+    {person:'Phil',hrs:6,client:'ChildPilot · Phase 1',desc:'Sprint planning & delivery'},
+    {person:'Mindy',hrs:3,client:'ChildPilot · Phase 1',desc:'Pitch meeting & kick off travel'},
+    {person:'Mindy',hrs:3,client:'Zoetis',desc:'NJ workshop attendance'},
+  ],
+  expenses:[
+    {date:'2026-01-30',desc:'Mileage – pitch meeting',client:'ChildPilot',cat:'Mileage',amt:53.60,status:'General Business'},
+    {date:'2026-02-18',desc:'Mileage – kick off',client:'ChildPilot',cat:'Mileage',amt:53.60,status:'General Business'},
+    {date:'2026-03-24',desc:'American Airlines – NJ workshop',client:'Zoetis',cat:'Air/Rail',amt:582.80,status:'Not Submitted'},
+    {date:'2026-03-24',desc:'Lyft – ground transport',client:'Zoetis',cat:'Ground Transport',amt:43.66,status:'Not Submitted'},
+    {date:'2026-03-24',desc:'DFW Valet parking',client:'Zoetis',cat:'Parking',amt:160.12,status:'Not Submitted'},
+    {date:'2026-03-24',desc:'Hilton – 2 nights',client:'Zoetis',cat:'Hotel/Lodging',amt:590.46,status:'Not Submitted'},
+    {date:'2026-03-24',desc:'DoorDash dinner',client:'Zoetis',cat:'Meals & Food',amt:28.19,status:'Not Submitted'},
+    {date:'2026-03-25',desc:'Breakfast x2',client:'Zoetis',cat:'Meals & Food',amt:27.16,status:'Not Submitted'},
+  ],
+  pipeline:[{name:'Zoetis',type:'Core Leadership',rev:22500,stage:'Stalled',lastContact:'2026-03-25',notes:'NJ workshop complete · awaiting internal budget decision'}],
+  subs:[{name:'All subscriptions (add line items)',billing:'Monthly',cost:392.30,cat:'All tools'}],
+  sheets:[
+    {name:'Client Dashboard',url:'',status:'pending'},
+    {name:'Finance Dashboard',url:'',status:'pending'},
+    {name:'Expense Log',url:'',status:'pending'},
+    {name:'Subscriptions',url:'',status:'pending'},
+  ],
+  reminders:[
+    {id:1,title:'Submit Zoetis expense report',body:'$1,432.81 on Mindy\'s personal card — not submitted. Do this today.',urgency:'urgent',done:false,meta:'Auto · Expenses'},
+    {id:2,title:'ChildPilot renewal · Apr 23',body:'Phase 2 retainer renews Apr 23. Confirm continuation and send renewal invoice.',urgency:'warn',done:false,meta:'Auto · Client renewal'},
+    {id:3,title:'Re-engage Zoetis',body:'Workshop done. Follow up this week on the engagement decision.',urgency:'warn',done:false,meta:'Auto · Pipeline'},
+    {id:4,title:'Deploy to GitHub Pages',body:'Follow the steps in Deploy & Maintain tab. Takes ~10 minutes. Gets Mindy access.',urgency:'info',done:false,meta:'Auto · Deploy'},
+    {id:5,title:'Set up Firebase sync',body:'Once hosted, add Firebase config for real-time data sync between you and Mindy.',urgency:'info',done:false,meta:'Auto · Deploy'},
+  ],
+  nextId:6,
+  currentUser:null,
+};
+
+// ── Nav ────────────────────────────────────────────────────────
+function nav(id,el){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el&&el.classList) el.classList.add('active');
+  else{
+    const map={dashboard:0,revenue:1,client:3,hours:4,pipeline:5,cashflow:6,expenses:7,subscriptions:8,partners:9,sheets:10,deploy:11};
+    const items=document.querySelectorAll('.nav-item');
+    if(items[map[id]]) items[map[id]].classList.add('active');
+  }
+}
+function setPeriod(p,btn){document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function openGuide(){document.getElementById('guideOverlay').classList.add('open');}
+
+// ── Auth (placeholder — activates after Firebase setup) ────────
+function toggleAuth(){
+  if(!FIREBASE_READY){
+    alert('Sign-in requires Firebase setup.\n\nGo to the Deploy & Maintain tab and follow Step 2 to set up Firebase. Once your config is in place, come back to Claude and say "activate Google login".');
+    return;
+  }
+  // Firebase auth will be wired in after config is added
+}
+
+// ── Save field (will sync to Firebase once configured) ─────────
+function saveField(key,el){
+  const val=el.innerText.trim();
+  // localStorage as fallback until Firebase is live
+  try{ localStorage.setItem('cfo_'+key, val); }catch(e){}
+}
+
+// ── Reminders ──────────────────────────────────────────────────
+function toggleReminders(){document.getElementById('remindersPanel').classList.toggle('open');}
+function renderReminders(){
+  const el=document.getElementById('remindersList');
+  const active=S.reminders.filter(r=>!r.done);
+  const done=S.reminders.filter(r=>r.done);
+  const uc={urgent:'urgent',warn:'warn',info:'info'};
+  el.innerHTML=[...active,...done].map(r=>`
+    <div class="reminder-card ${r.done?'done':uc[r.urgency]||''}">
+      <div class="reminder-title">${r.done?'✓ ':''}${r.title}</div>
+      <div class="reminder-body">${r.body}</div>
+      <div class="reminder-meta">${r.meta||''}</div>
+      ${!r.done?`<div class="reminder-actions">
+        <button class="rbtn rbtn-done" onclick="markDone(${r.id})">✓ Done</button>
+        <button class="rbtn rbtn-snooze" onclick="snooze(${r.id})">Snooze 3d</button>
+      </div>`:''}
+    </div>`).join('')||'<div style="font-size:12px;color:var(--muted);padding:10px 0;">All clear — no open actions.</div>';
+  const cnt=active.length;
+  ['reminderBadgeCount','alertCount'].forEach(id=>{const e=document.getElementById(id);if(e) e.textContent=cnt;});
+  const bl=document.getElementById('bellLabel');
+  if(bl) bl.textContent=cnt+' action'+(cnt!==1?'s':'');
+}
+function markDone(id){const r=S.reminders.find(r=>r.id===id);if(r) r.done=true;renderReminders();}
+function snooze(id){const r=S.reminders.find(r=>r.id===id);if(r){r.urgency='info';r.body+=' [Snoozed 3d]';}renderReminders();}
+function addCustomReminder(){
+  const txt=document.getElementById('customReminder').value.trim();if(!txt) return;
+  S.reminders.push({id:S.nextId++,title:txt,body:'Custom reminder.',urgency:'info',done:false,meta:'Manual · '+new Date().toLocaleDateString()});
+  document.getElementById('customReminder').value='';
+  renderReminders();
+}
+
+// ── Hours ──────────────────────────────────────────────────────
+function renderHours(){
+  const el=document.getElementById('hoursBreakdown');
+  if(!el) return;
+  el.innerHTML=S.team.map(h=>{
+    const p=h.target>0?Math.min(Math.round(h.hrs/h.target*100),100):0;
+    return `<div class="hr-row"><div class="hr-name">${h.name}</div><div class="hr-bar-wrap"><div class="hr-bar" style="width:${p}%;"></div></div><div class="hr-num">${h.hrs}h${h.target>0?' / '+h.target+'h':''}</div></div>`;
+  }).join('');
+  const log=document.getElementById('hoursLog');
+  if(log) log.innerHTML=S.hoursLog.map(h=>`<div class="hr-row"><div class="hr-name">${h.person}</div><div style="flex:1;font-size:11px;color:var(--muted);">${h.client} — ${h.desc}</div><div class="hr-num">${h.hrs}h</div></div>`).join('');
+}
+
+// ── Expenses ───────────────────────────────────────────────────
+function renderExpenses(){
+  const el=document.getElementById('expenseRows');if(!el) return;
+  el.innerHTML=S.expenses.map(e=>{
+    const sc=e.status==='Not Submitted'?'pd':e.status==='Reimbursed'?'pg':'pm';
+    return `<div class="table-row" style="grid-template-columns:90px 1fr 120px 85px 110px;">
+      <div class="td m" style="font-size:10px;">${e.date||'—'}</div>
+      <div><div class="td" style="font-size:11px;">${e.desc}</div><div class="td m" style="font-size:10px;">${e.cat}</div></div>
+      <div class="td m" style="font-size:11px;">${e.client}</div>
+      <div class="td" style="color:${e.status==='Not Submitted'?'var(--warn)':'var(--muted)'};">${e.amt?'$'+e.amt.toFixed(2):'—'}</div>
+      <div><span class="pill ${sc}"><span class="pill-dot"></span>${e.status}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ── Pipeline ───────────────────────────────────────────────────
+function renderPipeline(){
+  const el=document.getElementById('pipelineRows');if(!el) return;
+  el.innerHTML=S.pipeline.length?S.pipeline.map(p=>{
+    const sc=p.stage==='Stalled'?'pd':p.stage==='Negotiating'?'pw':p.stage==='Proposal sent'?'pp':'pi';
+    return `<div class="table-row clickable" style="grid-template-columns:140px 140px 110px 120px 80px 1fr;">
+      <div class="td">${p.name}</div><div class="td m" style="font-size:11px;">${p.type}</div>
+      <div class="td" style="color:var(--accent);">$${p.rev.toLocaleString()}</div>
+      <div class="td m" style="font-size:10px;">${p.lastContact||'—'}</div>
+      <div><span class="pill ${sc}"><span class="pill-dot"></span>${p.stage}</span></div>
+      <div class="td m" style="font-size:10px;">${p.notes||''}</div>
+    </div>`;
+  }).join(''):'<div style="padding:13px 16px;font-size:12px;color:var(--muted);">No prospects yet.</div>';
+}
+
+// ── Subs ───────────────────────────────────────────────────────
+function renderSubs(){
+  const el=document.getElementById('subRows');if(!el) return;
+  el.innerHTML=S.subs.map(s=>`<div class="table-row" style="grid-template-columns:1fr 90px 90px 90px;">
+    <div class="td">${s.name}</div><div class="td m">${s.billing}</div>
+    <div class="td" style="color:var(--danger);">$${s.cost.toFixed(2)}</div>
+    <div class="td m" style="font-size:11px;">${s.cat}</div>
+  </div>`).join('');
+  const t=document.getElementById('subTotal');
+  if(t) t.textContent='$'+S.subs.reduce((a,s)=>a+s.cost,0).toFixed(2);
+}
+
+// ── Sheets ─────────────────────────────────────────────────────
+function renderSheets(){
+  const el=document.getElementById('sheetRows');if(!el) return;
+  el.innerHTML=S.sheets.map(s=>`<div class="table-row" style="grid-template-columns:160px 1fr 100px 80px;">
+    <div class="td">${s.name}</div>
+    <div class="td m" style="font-size:10px;">${s.url||'— not connected'}</div>
+    <div class="td m" style="font-size:10px;">${s.url?'Just now':'—'}</div>
+    <div><span class="pill ${s.url?'pg':'pw'}"><span class="pill-dot"></span>${s.url?'Live':'Pending'}</span></div>
+  </div>`).join('');
+}
+function addSheet(){
+  const name=document.getElementById('sheet-name').value.trim();
+  const url=document.getElementById('sheet-url').value.trim();
+  if(!name||!url) return;
+  const ex=S.sheets.find(s=>s.name===name);
+  if(ex){ex.url=url;ex.status='live';}else S.sheets.push({name,url,status:'live'});
+  document.getElementById('sheet-name').value='';
+  document.getElementById('sheet-url').value='';
+  renderSheets();
+  // Update sync dot
+  document.getElementById('syncDot').className='sync-dot live';
+  document.getElementById('syncLabel').textContent='Sheet connected · live';
+  alert('✓ "'+name+'" connected!\n\nIn a new Claude chat, say: "Refresh my '+name+' data from this URL: '+url+'" and I\'ll pull the latest.');
+}
+
+// ── Add handlers ───────────────────────────────────────────────
+function addClient(){
+  const name=document.getElementById('fc-name').value.trim();if(!name) return;
+  S.reminders.push({id:S.nextId++,title:'Onboard: '+name,body:'Set up engagement docs, confirm rate, schedule kick off.',urgency:'info',done:false,meta:'Auto · New client'});
+  renderReminders();
+  document.getElementById('addClientModal').classList.remove('open');
+  nav('client',null);
+}
+function addExpense(){
+  const amt=+document.getElementById('fe-amt').value;if(!amt) return;
+  S.expenses.unshift({date:document.getElementById('fe-date').value,desc:document.getElementById('fe-desc').value,client:document.getElementById('fe-client').value,cat:document.getElementById('fe-cat').value,amt,status:document.getElementById('fe-status').value});
+  renderExpenses();document.getElementById('addExpenseModal').classList.remove('open');
+}
+function addHours(){
+  const hrs=+document.getElementById('fh-hrs').value;if(!hrs) return;
+  const person=document.getElementById('fh-person').value;
+  S.hoursLog.unshift({person,hrs,client:document.getElementById('fh-client').value,desc:document.getElementById('fh-desc').value});
+  const t=S.team.find(t=>t.name.toLowerCase().includes(person.toLowerCase()));
+  if(t) t.hrs+=hrs;
+  renderHours();document.getElementById('addHoursModal').classList.remove('open');
+}
+function addPipeline(){
+  const name=document.getElementById('fp-name').value.trim();if(!name) return;
+  S.pipeline.push({name,type:document.getElementById('fp-type').value,rev:+document.getElementById('fp-rev').value||0,stage:document.getElementById('fp-stage').value,lastContact:document.getElementById('fp-date').value,notes:document.getElementById('fp-notes').value});
+  renderPipeline();document.getElementById('addPipelineModal').classList.remove('open');
+}
+function addSub(){
+  const name=document.getElementById('fs-name').value.trim();if(!name) return;
+  S.subs.push({name,billing:document.getElementById('fs-billing').value,cost:+document.getElementById('fs-cost').value||0,cat:document.getElementById('fs-cat').value});
+  renderSubs();document.getElementById('addSubModal').classList.remove('open');
+}
+
+// ── Init ───────────────────────────────────────────────────────
+function init(){
+  document.getElementById('dateBadge').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  if(!FIREBASE_READY){
+    document.getElementById('syncDot').className='sync-dot pending';
+    document.getElementById('syncLabel').textContent='Local only · see Deploy tab';
+  }
+  renderHours();renderExpenses();renderPipeline();renderSubs();renderSheets();renderReminders();
+  setTimeout(()=>{if(!sessionStorage.getItem('rSeen')){toggleReminders();sessionStorage.setItem('rSeen','1');}},1800);
+}
+init();
+</script>
+</body>
+</html>
